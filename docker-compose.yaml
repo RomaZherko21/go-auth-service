@@ -27,19 +27,11 @@ services:
   db:
     image: postgres:16.1
     container_name: db
-    # build:
-    #   context: ./MySQL
-    #   target: MySQL_DB
     ports:
       - ${DB_PORT}:5432
     volumes:
       - db_volume:/var/lib/postgresql/data
       - ./sql-scripts:/docker-entrypoint-initdb.d
-    # volumes:
-    #   - 'db_volume:/var/lib/mysql'
-    # restart: always
-    # cap_add:
-    #   - SYS_NICE
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
