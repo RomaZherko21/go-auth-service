@@ -1,11 +1,11 @@
 package db
 
 import (
+	_ "github.com/lib/pq"
+
   "database/sql"
   "fmt"
-
-  _ "github.com/lib/pq"
-
+  
   "exampleApi/helpers"
 )
 
@@ -23,7 +23,7 @@ func ConnectDb(){
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-	panic(err)
+		panic(err)
 	}
 
 	defer db.Close()

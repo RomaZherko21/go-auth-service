@@ -7,34 +7,8 @@ import (
 	"fmt"
 	"exampleApi/entities/user"
 	"exampleApi/db"
+	"exampleApi/helpers"
 )
-
-type User struct {
-    firstName string 
-    lastName string 
-    age int 
-}
-
-type UserI interface {
-    getFullName() string
-}
-
-
-func (user User) getFullName() string {
-    return user.firstName + " " + user.lastName
-}
-
-func (user User) getAge() int {
-    return user.age
-}
-
-
-func some(u UserI, us *User) string{
-	us.firstName = "KEKE"
-	us.getFullName()
-
-	return u.getFullName()
-}
 
 func handlers(){
 	const (
@@ -74,12 +48,14 @@ func main() {
 
 	handlers()
 
-	l, err := net.Listen("tcp", ":8000")
+	var SERVER_PORT = helpers.GetEnv("SERVER_PORT")
+
+	l, err := net.Listen("tcp", ":" + SERVER_PORT)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	fmt.Println("Server has been started on port 8000")
+	fmt.Printf("Server has been started on port %v", SERVER_PORT)
 
 	if err := http.Serve(l, nil); err != nil {
 		fmt.Println(err)

@@ -1,0 +1,67 @@
+version: '3.8'
+
+x-db-variables: &db-variables
+  DB_PORT: ${DB_PORT}
+  DB_HOST: ${DB_HOST}
+  DB_NAME: ${DB_NAME}
+  DB_USER: ${DB_USER}
+  DB_PASSWORD: ${DB_PASSWORD}
+
+x-api-variables: &api-variables
+  SERVER_PORT: ${SERVER_PORT}
+
+services:
+  # api:
+  #   image: golang:1.12.7
+  #   container_name: api
+  #   working_dir: /app
+  #   volumes:
+  #     - /Users/romazherko/.gvm/pkgsets/go1.12.7/global/src/exampleApi:/app
+  #   ports:
+  #     - ${SERVER_PORT}:${SERVER_PORT}
+  #   command: go run cmd/main.go
+  #   restart: always
+  #   environment:
+  #     <<: [*db-variables, *api-variables]
+
+  db:
+    image: postgres:16.1
+    container_name: db
+    # build:
+    #   context: ./MySQL
+    #   target: MySQL_DB
+    ports:
+      - ${DB_PORT}:5432
+    volumes:
+      - db_volume:/var/lib/postgresql/data
+      - ./sql-scripts:/docker-entrypoint-initdb.d
+    # volumes:
+    #   - 'db_volume:/var/lib/mysql'
+    # restart: always
+    # cap_add:
+    #   - SYS_NICE
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      <<: *db-variables
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4
+    restart: always
+    ports:
+      - "8888:80"
+    environment:
+      # host.docker.internal instead of localhost while connecting to DB in pgAdmin 
+      PGADMIN_DEFAULT_EMAIL: root@example.com
+      PGADMIN_DEFAULT_PASSWORD: 1234
+    depends_on:
+      - db
+    volumes:
+      - pgadmin_volume:/var/lib/pgadmin
+
+volumes:
+  db_volume:
+  # api_volume:
+  pgadmin_volume:
