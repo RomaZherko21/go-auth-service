@@ -9,7 +9,7 @@ help:
 
 .PHONY: run
 run: ## Runs the whole app in docker containers 
-	docker compose -f ./docker-compose.yaml up
+	docker compose -f ./docker-compose.yaml up -d 
 
 .PHONY: build
 build: ## Build or rebuild containers
