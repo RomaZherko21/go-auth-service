@@ -38,8 +38,8 @@ func handlers(db *sql.DB) {
 		switch req.URL.Path {
 		case USERS:
 			switch req.Method {
-			case GET:
-				user.GetUser(w, req, db)
+			// case GET:
+			// 	user.GetUser(w, req, db)
 			case POST:
 				user.CreateUser(w, req, db)
 			case PUT:
