@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"database/sql"
+
 	"exampleApi/types"
 	"exampleApi/helpers"
 )
@@ -14,7 +16,7 @@ import (
 var users = make(map[int]User)
 var lastUserId = 0
 
-func GetUser(w http.ResponseWriter,  req *http.Request) {
+func GetUser(w http.ResponseWriter,  req *http.Request, db *sql.DB) {
 	userId := req.URL.Query().Get("id")
 
 	if(userId==""){
@@ -36,7 +38,7 @@ func GetUser(w http.ResponseWriter,  req *http.Request) {
 	helpers.HttpSend(user, w)
 }
 
-func PostUser(w http.ResponseWriter, req *http.Request) {
+func CreateUser(w http.ResponseWriter, req *http.Request, db *sql.DB) {
 	var user User
 
 	err := json.NewDecoder(req.Body).Decode(&user)
@@ -45,18 +47,14 @@ func PostUser(w http.ResponseWriter, req *http.Request) {
         return
     }
 
-	_, ok := users[lastUserId]
-	if(ok){
-		message:= fmt.Sprintf("User with id %v already exits!", lastUserId)
-		log.Printf(message)
-		helpers.HttpSend(types.HttpMessage{Message:message}, w)
-		return 
-	}
+	UserServiceInstance.CreateUser(db, &user)
 
-	user.Id = lastUserId
+	log.Printf("User was created")
 
-	users[lastUserId] = user
+	// user.Id = lastUserId
 
-	lastUserId+= 1
-	helpers.HttpSend(types.HttpMessage{Message:"User was successfuly created!"}, w)
+	// users[lastUserId] = user
+
+	// lastUserId+= 1
+	// helpers.HttpSend(types.HttpMessage{Message:"User was successfuly created!"}, w)
 }

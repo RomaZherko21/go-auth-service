@@ -2,13 +2,14 @@ package db
 
 import (
 	_ "github.com/lib/pq"
+	log "github.com/sirupsen/logrus"
 
-  "database/sql"
-  "fmt"
-  "os"	
-  "os/exec"
-  
-  "exampleApi/helpers"
+	"database/sql"
+	"fmt"
+	"os"
+	"os/exec"
+
+	"exampleApi/helpers"
 )
 
 var DB_PORT = helpers.GetEnv("DB_PORT")
@@ -20,34 +21,36 @@ var DB_PASSWORD = helpers.GetEnv("DB_PASSWORD")
 func runMigrations() {
 	psqlInfo := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME)
 
-    cmd := exec.Command("migrate", "-path", "db/migrations", "-database", psqlInfo, "up")
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
+	cmd := exec.Command("migrate", "-path", "db/migrations", "-database", psqlInfo, "up")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
-    err := cmd.Run()
-    if err != nil {
-        panic(err)
-    }
+	err := cmd.Run()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	log.Info("Migrations have passed!")
 }
 
-func ConnectDb(){
+func ConnectDb() *sql.DB {
 	runMigrations()
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+
-    "password=%s dbname=%s sslmode=disable",
-    DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)
+		"password=%s dbname=%s sslmode=disable",
+		DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
-
-	defer db.Close()
 
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
-	fmt.Println("DB was successfully connected!")
+	log.Info("DB was successfully connected!")
+
+	return db
 }

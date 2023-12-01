@@ -1,20 +1,30 @@
 package main
 
 import (
-	"log"
-	"net/http"
-	"net"
 	"fmt"
-	"exampleApi/entities/user"
+
+	log "github.com/sirupsen/logrus"
+
+	"database/sql"
+	"net"
+	"net/http"
+
+	"exampleApi/config"
 	"exampleApi/db"
+	"exampleApi/entities/user"
 	"exampleApi/helpers"
 )
 
-func handlers(){
+func init() {
+	config.InitLogger()
+
+}
+
+func handlers(db *sql.DB) {
 	const (
-		GET = "GET"
-		POST = "POST"
-		PUT = "PUT"
+		GET    = "GET"
+		POST   = "POST"
+		PUT    = "PUT"
 		DELETE = "DELETE"
 	)
 
@@ -23,15 +33,15 @@ func handlers(){
 		POSTS = "/posts"
 	)
 
-	http.HandleFunc(USERS, func(w http.ResponseWriter, req *http.Request){
+	http.HandleFunc(USERS, func(w http.ResponseWriter, req *http.Request) {
 
 		switch req.URL.Path {
 		case USERS:
 			switch req.Method {
 			case GET:
-				user.GetUser(w, req)
+				user.GetUser(w, req, db)
 			case POST:
-				user.PostUser(w, req)
+				user.CreateUser(w, req, db)
 			case PUT:
 				log.Println("three")
 			case DELETE:
@@ -44,20 +54,22 @@ func handlers(){
 }
 
 func main() {
-	db.ConnectDb()
+	dataBase := db.ConnectDb()
 
-	handlers()
+	defer dataBase.Close()
+
+	handlers(dataBase)
 
 	var SERVER_PORT = helpers.GetEnv("SERVER_PORT")
 
-	l, err := net.Listen("tcp", ":" + SERVER_PORT)
+	l, err := net.Listen("tcp", fmt.Sprintf(":%v", SERVER_PORT))
 	if err != nil {
-		fmt.Println(err)
+		log.Panic(err)
 	}
 
-	fmt.Printf("Server has been started on port %v", SERVER_PORT)
+	log.Infof("Server has been started on port %v", SERVER_PORT)
 
 	if err := http.Serve(l, nil); err != nil {
-		fmt.Println(err)
+		log.Panic(err)
 	}
 }
