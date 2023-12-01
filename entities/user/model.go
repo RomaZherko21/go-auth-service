@@ -10,4 +10,3 @@ type User struct {
 	PhoneNumber string    `json:"phone_number"`
 	CreatedAt   time.Time `json:"created_at"`
 }
-

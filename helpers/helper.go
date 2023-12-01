@@ -1,24 +1,25 @@
 package helpers
 
 import (
-	"github.com/joho/godotenv"
 	"encoding/json"
-	"net/http"
 	"log"
+	"net/http"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 func GetEnv(key string) string {
 	err := godotenv.Load(".env")
-  
-	if err != nil {
-	  log.Fatalf("Error loading .env file")
-	}
-  
-	return os.Getenv(key)
-  }
 
-func HttpSend(data interface{}, w  http.ResponseWriter) {
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	return os.Getenv(key)
+}
+
+func HttpSend(data interface{}, w http.ResponseWriter) {
 	jData, err := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
@@ -27,5 +28,4 @@ func HttpSend(data interface{}, w  http.ResponseWriter) {
 	}
 
 	w.Write(jData)
-	return
 }

@@ -2,15 +2,12 @@ package user
 
 import (
 	"database/sql"
-	"log"
 )
 
 type UserService struct {
-
 }
 
 func (u *UserService) CreateUser(db *sql.DB, user *User) {
-	log.Printf("User was created", user)
 
 	sqlStatement := `INSERT INTO users (email, password, nickname, phone_number, created_at)
 	VALUES ($1, $2, $3, $4, $5);`

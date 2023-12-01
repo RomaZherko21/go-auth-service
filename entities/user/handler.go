@@ -1,51 +1,45 @@
 package user
 
 import (
-	"fmt"
-	"net/http"
-	"log"
 	"encoding/json"
-	"strconv"
+	"log"
+	"net/http"
 
 	"database/sql"
-
-	"exampleApi/types"
-	"exampleApi/helpers"
 )
 
-var users = make(map[int]User)
-var lastUserId = 0
+// var users = make(map[int]User)
 
-func GetUser(w http.ResponseWriter,  req *http.Request, db *sql.DB) {
-	userId := req.URL.Query().Get("id")
+// func GetUser(w http.ResponseWriter, req *http.Request, db *sql.DB) {
+// 	userId := req.URL.Query().Get("id")
 
-	if(userId==""){
-		log.Printf("Don't have query parameter: userId")
-		helpers.HttpSend(types.HttpMessage{Message:"Don't have query parameter: userId"}, w)
-		return
-	}
+// 	if userId == "" {
+// 		log.Printf("Don't have query parameter: userId")
+// 		helpers.HttpSend(types.HttpMessage{Message: "Don't have query parameter: userId"}, w)
+// 		return
+// 	}
 
-	intUserId, _ := strconv.Atoi(userId)
+// 	intUserId, _ := strconv.Atoi(userId)
 
-	user, ok := users[intUserId]
-	if(!ok){
-		message:= fmt.Sprintf("User with id %v does not exits!", userId)
-		log.Printf(message)
-		helpers.HttpSend(types.HttpMessage{Message: message}, w)
-		return
-	}
+// 	user, ok := users[intUserId]
+// 	if !ok {
+// 		message := fmt.Sprintf("User with id %v does not exits!", userId)
+// 		log.Printf(message)
+// 		helpers.HttpSend(types.HttpMessage{Message: message}, w)
+// 		return
+// 	}
 
-	helpers.HttpSend(user, w)
-}
+// 	helpers.HttpSend(user, w)
+// }
 
 func CreateUser(w http.ResponseWriter, req *http.Request, db *sql.DB) {
 	var user User
 
 	err := json.NewDecoder(req.Body).Decode(&user)
 	if err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	UserServiceInstance.CreateUser(db, &user)
 
