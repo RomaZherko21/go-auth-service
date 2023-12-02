@@ -27,7 +27,7 @@ func runMigrations() {
 
 	err := cmd.Run()
 	if err != nil {
-		log.Panic(err)
+		log.Panicf("Migrations error: %v", err)
 	}
 
 	log.Info("Migrations have passed!")
@@ -42,12 +42,12 @@ func ConnectDb() *sql.DB {
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		log.Panic(err)
+		log.Panicf("DB connect err: %v", err)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		log.Panic(err)
+		log.Panicf("DB ping err: %v", err)
 	}
 
 	log.Info("DB was successfully connected!")

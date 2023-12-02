@@ -2,9 +2,10 @@ package helpers
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/joho/godotenv"
 )
@@ -13,7 +14,7 @@ func GetEnv(key string) string {
 	err := godotenv.Load(".env")
 
 	if err != nil {
-		log.Fatalf("Error loading .env file")
+		log.Panicf("Error loading .env file: %v", err)
 	}
 
 	return os.Getenv(key)

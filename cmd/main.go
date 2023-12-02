@@ -17,7 +17,6 @@ import (
 
 func init() {
 	config.InitLogger()
-
 }
 
 func handlers(db *sql.DB) {
@@ -64,12 +63,12 @@ func main() {
 
 	l, err := net.Listen("tcp", fmt.Sprintf(":%v", SERVER_PORT))
 	if err != nil {
-		log.Panic(err)
+		log.Panicf("Server listen err: %v", err)
 	}
 
 	log.Infof("Server has been started on port %v", SERVER_PORT)
 
 	if err := http.Serve(l, nil); err != nil {
-		log.Panic(err)
+		log.Panicf("Server serve err: %v", err)
 	}
 }
