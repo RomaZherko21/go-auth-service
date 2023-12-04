@@ -1,11 +1,7 @@
 package user
 
 import (
-	"encoding/json"
-	"log"
-	"net/http"
-
-	"database/sql"
+	"github.com/gin-gonic/gin"
 )
 
 // var users = make(map[int]User)
@@ -32,23 +28,16 @@ import (
 // 	helpers.HttpSend(user, w)
 // }
 
-func CreateUser(w http.ResponseWriter, req *http.Request, db *sql.DB) {
-	var user User
+func CreateUser(c *gin.Context) {
+	// var user User
 
-	err := json.NewDecoder(req.Body).Decode(&user)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	// err := json.NewDecoder(req.Body).Decode(&user)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusBadRequest)
+	// 	return
+	// }
 
-	UserServiceInstance.CreateUser(db, &user)
+	// UserServiceInstance.CreateUser(db, &user)
 
-	log.Printf("User was created")
-
-	// user.Id = lastUserId
-
-	// users[lastUserId] = user
-
-	// lastUserId+= 1
-	// helpers.HttpSend(types.HttpMessage{Message:"User was successfuly created!"}, w)
+	// log.Printf("User was created")
 }
