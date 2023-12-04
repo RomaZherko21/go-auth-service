@@ -26,3 +26,7 @@ migrateup: ## migrate postgresql up
 .PHONY: migrate postgresql down
 migratedown: ## migrate postgresql down
 	migrate -path ./db/migrations -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable" down
+
+.PHONY: goModule
+down: ## Remove docker containers
+	go env -w GO111MODULE=on
