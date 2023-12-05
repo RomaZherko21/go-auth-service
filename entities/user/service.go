@@ -2,12 +2,15 @@ package user
 
 import (
 	"database/sql"
+
+	"github.com/gin-gonic/gin"
 )
 
 type UserService struct {
 }
 
-func (u *UserService) CreateUser(db *sql.DB, user *User) {
+func (u *UserService) CreateUser(c *gin.Context, user *User) {
+	db := c.MustGet("db").(*sql.DB)
 
 	sqlStatement := `INSERT INTO users (email, password, nickname, phone_number, created_at)
 	VALUES ($1, $2, $3, $4, $5);`

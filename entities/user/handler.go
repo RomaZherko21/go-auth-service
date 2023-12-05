@@ -1,6 +1,9 @@
 package user
 
 import (
+	"fmt"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,15 +32,19 @@ import (
 // }
 
 func CreateUser(c *gin.Context) {
-	// var user User
+	var user User
 
-	// err := json.NewDecoder(req.Body).Decode(&user)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusBadRequest)
-	// 	return
-	// }
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-	// UserServiceInstance.CreateUser(db, &user)
+	fmt.Println("Received email:", user.Email)
+	fmt.Println("Received name:", user.Nickname)
+
+	UserServiceInstance.CreateUser(c, &user)
+
+	c.JSON(http.StatusOK, gin.H{"message": "JSON processed successfully"})
 
 	// log.Printf("User was created")
 }

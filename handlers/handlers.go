@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"database/sql"
@@ -9,6 +9,10 @@ import (
 )
 
 func Handlers(r *gin.Engine, db *sql.DB) {
+
+	r.Use(func(c *gin.Context) {
+		SetDbMiddleware(c, db)
+	})
 
 	r.POST("/users/", user.CreateUser)
 	// r.GET("/task/", server.getAllTasksHandler)

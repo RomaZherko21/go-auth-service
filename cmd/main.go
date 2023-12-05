@@ -8,7 +8,7 @@ import (
 
 	"exampleApi/config"
 	"exampleApi/db"
-
+	"exampleApi/handlers"
 	"exampleApi/helpers"
 )
 
@@ -23,7 +23,7 @@ func main() {
 
 	router := gin.Default()
 
-	Handlers(router, dataBase)
+	handlers.Handlers(router, dataBase)
 
 	var SERVER_PORT = helpers.GetEnv("SERVER_PORT")
 
