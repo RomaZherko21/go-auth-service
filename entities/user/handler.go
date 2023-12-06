@@ -1,8 +1,9 @@
 package user
 
 import (
-	"fmt"
+	"exampleApi/helpers"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,8 +40,14 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("Received email:", user.Email)
-	fmt.Println("Received name:", user.Nickname)
+	user.CreatedAt = time.Now().UTC()
+
+	validationResult := helpers.Validate(&user)
+
+	if !validationResult.OK {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationResult.Errors})
+		return
+	}
 
 	UserServiceInstance.CreateUser(c, &user)
 
