@@ -4,9 +4,9 @@ import (
 	"os"
 
 	"github.com/go-playground/validator"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/joho/godotenv"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func GetEnv(key string) string {

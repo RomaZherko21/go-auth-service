@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+
 	log "github.com/sirupsen/logrus"
 
 	"exampleApi/config"
@@ -13,7 +14,7 @@ import (
 )
 
 func init() {
-	config.InitLogger()
+	config.InitLogger(helpers.GetEnv("LOG_LEVEL"))
 }
 
 func main() {

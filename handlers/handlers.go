@@ -14,6 +14,10 @@ func Handlers(r *gin.Engine, db *sql.DB) {
 		SetDbMiddleware(c, db)
 	})
 
+	r.Use(func(c *gin.Context) {
+		SetStartTime(c)
+	})
+
 	r.POST("/users/", user.CreateUser)
 	// r.GET("/task/", server.getAllTasksHandler)
 	// r.DELETE("/task/", server.deleteAllTasksHandler)
