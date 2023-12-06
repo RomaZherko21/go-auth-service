@@ -53,6 +53,6 @@ func CreateUser(c *gin.Context) {
 
 	UserServiceInstance.CreateUser(c, &user)
 
-	log.HttpLog(c, log.Info, http.StatusOK, "User created successfully")
 	c.JSON(http.StatusOK, gin.H{"message": "User created successfully"})
+	log.HttpLog(c, log.Info, http.StatusOK, "User created successfully")
 }

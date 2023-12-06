@@ -7,12 +7,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetDbMiddleware(c *gin.Context, db *sql.DB) {
+func InitMiddlewares(r *gin.Engine, db *sql.DB) {
+	r.Use(func(c *gin.Context) {
+		setDbMiddleware(c, db)
+	})
+
+	r.Use(func(c *gin.Context) {
+		setStartTime(c)
+	})
+}
+
+func setDbMiddleware(c *gin.Context, db *sql.DB) {
 	c.Set("db", db)
 	c.Next()
 }
 
-func SetStartTime(c *gin.Context) {
+func setStartTime(c *gin.Context) {
 	startTime := time.Now()
 	c.Set("startTime", startTime)
 	c.Next()

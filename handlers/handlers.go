@@ -10,13 +10,7 @@ import (
 
 func Handlers(r *gin.Engine, db *sql.DB) {
 
-	r.Use(func(c *gin.Context) {
-		SetDbMiddleware(c, db)
-	})
-
-	r.Use(func(c *gin.Context) {
-		SetStartTime(c)
-	})
+	InitMiddlewares(r, db)
 
 	r.POST("/users/", user.CreateUser)
 	// r.GET("/task/", server.getAllTasksHandler)
