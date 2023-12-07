@@ -5,6 +5,7 @@ import (
 	"unicode"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/ttacon/libphonenumber"
 )
 
 type ValidationError struct {
@@ -19,12 +20,13 @@ type ValidationResult struct {
 
 var validationMessages = map[string]string{
 	"email":    "Email must contain @ and . symbols, f.e. user1@gmail.com",
-	"password": "password must contain at least one uppercase, lowercase, punctation symbol and numeric",
+	"password": "Password must contain at least one uppercase, lowercase, punctation symbol and numeric",
 }
 
 func Validate(data interface{}) ValidationResult {
 	validate := validator.New()
 	_ = validate.RegisterValidation("password", PasswordValidator)
+	_ = validate.RegisterValidation("phone", PhoneNumberValidator)
 
 	err := validate.Struct(data)
 
@@ -52,6 +54,19 @@ func Validate(data interface{}) ValidationResult {
 	return ValidationResult{
 		OK: true,
 	}
+}
+
+func PhoneNumberValidator(fl validator.FieldLevel) bool {
+	value := fl.Field().String()
+
+	// Try to extract the country code from the phone number
+	parsedNumber, err := libphonenumber.Parse(value, "")
+	fmt.Println(parsedNumber)
+	if err != nil {
+		return false
+	}
+
+	return libphonenumber.IsValidNumber(parsedNumber)
 }
 
 func PasswordValidator(fl validator.FieldLevel) bool {
