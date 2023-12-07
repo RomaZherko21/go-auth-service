@@ -49,6 +49,16 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
+	password, err := hashPassword(user.Password)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Error, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	user.Password = password
+
 	if err := UserServiceInstance.CreateUser(c, &user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
