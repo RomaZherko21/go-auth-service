@@ -26,11 +26,12 @@ func HttpLog(c *gin.Context, level LogLevel, httpStatus int, message string) {
 	startTime := c.MustGet("startTime")
 
 	fields := log.Fields{
-		"method":     c.Request.Method,
-		"path":       c.Request.RequestURI,
-		"statusCode": httpStatus,
-		"client_ip":  c.ClientIP(),
-		"duration":   time.Since(startTime.(time.Time)) / 1000000, // time in milliseconds
+		"method":      c.Request.Method,
+		"path":        c.Request.URL.Path,
+		"statusCode":  httpStatus,
+		"client_ip":   c.ClientIP(),
+		"duration_ms": time.Since(startTime.(time.Time)) / 1000000,
+		"user_agent":  c.Request.UserAgent(),
 	}
 
 	switch level {

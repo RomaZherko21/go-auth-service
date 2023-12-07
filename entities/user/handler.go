@@ -41,8 +41,6 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	user.CreatedAt = helpers.GetCurrentTime()
-
 	validationResult := helpers.Validate(&user)
 
 	if !validationResult.OK {
@@ -51,7 +49,11 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	UserServiceInstance.CreateUser(c, &user)
+	if err := UserServiceInstance.CreateUser(c, &user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User created successfully"})
 	log.HttpLog(c, log.Info, http.StatusOK, "User created successfully")
