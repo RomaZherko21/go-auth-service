@@ -1,6 +1,10 @@
 package user
 
 import (
+	"exampleApi/helpers"
+	"time"
+
+	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -14,4 +18,22 @@ func isPasswordCorrect(password string, hashedPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 
 	return err == nil
+}
+
+func createToken(userEmail string) (string, error) {
+	var err error
+
+	atClaims := jwt.MapClaims{}
+
+	atClaims["authorized"] = true
+	atClaims["user_email"] = userEmail
+	atClaims["exp"] = time.Now().Add(time.Hour * 3).Unix()
+
+	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
+	token, err := at.SignedString([]byte(helpers.GetEnv("ACCESS_SECRET")))
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
 }

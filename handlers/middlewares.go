@@ -2,9 +2,13 @@ package handlers
 
 import (
 	"database/sql"
+	"exampleApi/helpers"
+	"exampleApi/helpers/log"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,10 +34,17 @@ func setStartTime(c *gin.Context) {
 }
 
 func authMiddleware(c *gin.Context) {
-	_, ok := c.GetQuery("access_token")
+	authorization := c.GetHeader("authorization")
 
-	if !ok {
+	tokenString := strings.Fields(authorization)[1]
+
+	_, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(helpers.GetEnv("ACCESS_SECRET")), nil
+	})
+
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, err.Error())
 		c.Abort()
 		return
 	}

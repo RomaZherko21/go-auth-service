@@ -16,8 +16,6 @@ func Handlers(r *gin.Engine, db *sql.DB) {
 	r.POST("/signIn", user.SignIn)
 	r.POST("/signUp", user.SignUp)
 
-	r.POST("/users", user.CreateUser)
-
 	r.GET("/private", authMiddleware, func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "This is a private route"})
 	})
