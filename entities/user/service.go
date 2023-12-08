@@ -9,6 +9,20 @@ import (
 type UserService struct {
 }
 
+func (u *UserService) GetUserPassword(c *gin.Context, user *User) (string, error) {
+	db := c.MustGet("db").(*sql.DB)
+
+	sqlStatement := `SELECT password
+	FROM users
+	WHERE users.email=$1;`
+
+	var password string
+
+	err := db.QueryRow(sqlStatement, user.Email).Scan(&password)
+
+	return password, err
+}
+
 func (u *UserService) CreateUser(c *gin.Context, user *User) error {
 	db := c.MustGet("db").(*sql.DB)
 

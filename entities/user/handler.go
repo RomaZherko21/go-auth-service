@@ -8,29 +8,71 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// var users = make(map[int]User)
+func SignIn(c *gin.Context) {
+	var user User
 
-// func GetUser(w http.ResponseWriter, req *http.Request, db *sql.DB) {
-// 	userId := req.URL.Query().Get("id")
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
 
-// 	if userId == "" {
-// 		log.Printf("Don't have query parameter: userId")
-// 		helpers.HttpSend(types.HttpMessage{Message: "Don't have query parameter: userId"}, w)
-// 		return
-// 	}
+	password, err := UserServiceInstance.GetUserPassword(c, &user)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
 
-// 	intUserId, _ := strconv.Atoi(userId)
+	isAuth := isPasswordCorrect(user.Password, password)
 
-// 	user, ok := users[intUserId]
-// 	if !ok {
-// 		message := fmt.Sprintf("User with id %v does not exits!", userId)
-// 		log.Printf(message)
-// 		helpers.HttpSend(types.HttpMessage{Message: message}, w)
-// 		return
-// 	}
+	if isAuth {
+		c.JSON(http.StatusOK, gin.H{"access_token": "123"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, "user authenticated")
+		return
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong email or password"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, "wrong email or password")
+		return
+	}
+}
 
-// 	helpers.HttpSend(user, w)
-// }
+func SignUp(c *gin.Context) {
+	var user User
+
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	validationResult := helpers.Validate(&user)
+
+	if !validationResult.OK {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validationResult.Errors})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, "validation error")
+		return
+	}
+
+	password, err := hashPassword(user.Password)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Error, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	user.Password = password
+
+	if err := UserServiceInstance.CreateUser(c, &user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User created successfully"})
+	log.HttpLog(c, log.Info, http.StatusOK, "User created successfully")
+}
 
 func CreateUser(c *gin.Context) {
 	var user User

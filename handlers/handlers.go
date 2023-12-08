@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 
@@ -12,7 +13,15 @@ func Handlers(r *gin.Engine, db *sql.DB) {
 
 	InitMiddlewares(r, db)
 
-	r.POST("/users/", user.CreateUser)
+	r.POST("/signIn", user.SignIn)
+	r.POST("/signUp", user.SignUp)
+
+	r.POST("/users", user.CreateUser)
+
+	r.GET("/private", authMiddleware, func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "This is a private route"})
+	})
+
 	// r.GET("/task/", server.getAllTasksHandler)
 	// r.DELETE("/task/", server.deleteAllTasksHandler)
 	// r.GET("/task/:id", server.getTaskHandler)
