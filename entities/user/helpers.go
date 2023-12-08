@@ -2,6 +2,7 @@ package user
 
 import (
 	"exampleApi/helpers"
+	"strconv"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -27,7 +28,13 @@ func createToken(userEmail string) (string, error) {
 
 	atClaims["authorized"] = true
 	atClaims["user_email"] = userEmail
-	atClaims["exp"] = time.Now().Add(time.Hour * 3).Unix()
+
+	accessTokenExp, err := strconv.Atoi(helpers.GetEnv("ACCESS_TOKEN_EXP"))
+	if err != nil {
+		return "", err
+	}
+
+	atClaims["exp"] = time.Now().Add(time.Minute * time.Duration(accessTokenExp)).Unix()
 
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
 	token, err := at.SignedString([]byte(helpers.GetEnv("ACCESS_SECRET")))

@@ -36,7 +36,16 @@ func setStartTime(c *gin.Context) {
 func authMiddleware(c *gin.Context) {
 	authorization := c.GetHeader("authorization")
 
-	tokenString := strings.Fields(authorization)[1]
+	tokenFields := strings.Fields(authorization)
+
+	if len(tokenFields) != 2 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "no access token"})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "no access token")
+		c.Abort()
+		return
+	}
+
+	tokenString := tokenFields[1]
 
 	_, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(helpers.GetEnv("ACCESS_SECRET")), nil
