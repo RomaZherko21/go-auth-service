@@ -57,8 +57,8 @@ func authMiddleware(c *gin.Context) {
 
 	tokenString := tokenFields[1]
 
-	_, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return []byte(helpers.GetEnv("ACCESS_SECRET")), nil
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(helpers.GetEnv("ACCESS_TOKEN_SECRET")), nil
 	})
 
 	if err != nil {
@@ -67,6 +67,16 @@ func authMiddleware(c *gin.Context) {
 		c.Abort()
 		return
 	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+
+	if !ok || !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "token invalid")
+		c.Abort()
+		return
+	}
+	c.Set("userId", claims["user_id"])
 
 	c.Next()
 }
