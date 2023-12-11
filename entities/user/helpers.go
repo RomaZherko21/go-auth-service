@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/twinj/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -15,32 +16,65 @@ func hashPassword(password string) (string, error) {
 	return string(hashedPassword), err
 }
 
-func isPasswordCorrect(password string, hashedPassword string) bool {
+func checkPassword(password string, hashedPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 
 	return err == nil
 }
 
-func createToken(userEmail string) (string, error) {
+type TokenDetails struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	AccessUuid   string `json:"access_uuid"`
+	RefreshUuid  string `json:"refresh_uuid"`
+	AtExpires    int64  `json:"at_expires"`
+	RtExpires    int64  `json:"rt_expires"`
+}
+
+func createTokens(userId int) (*TokenDetails, error) {
 	var err error
 
-	atClaims := jwt.MapClaims{}
+	td := &TokenDetails{}
 
-	atClaims["authorized"] = true
-	atClaims["user_email"] = userEmail
-
-	accessTokenExp, err := strconv.Atoi(helpers.GetEnv("ACCESS_TOKEN_EXP"))
+	//Creating Access Token
+	atExp, err := strconv.Atoi(helpers.GetEnv("ACCESS_TOKEN_EXP_MIN"))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	atClaims["exp"] = time.Now().Add(time.Minute * time.Duration(accessTokenExp)).Unix()
+	td.AtExpires = time.Now().Add(time.Minute * time.Duration(atExp)).Unix()
+	td.AccessUuid = uuid.NewV4().String()
+
+	atClaims := jwt.MapClaims{}
+	atClaims["authorized"] = true
+	atClaims["user_id"] = userId
+	atClaims["exp"] = td.AtExpires
 
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
-	token, err := at.SignedString([]byte(helpers.GetEnv("ACCESS_SECRET")))
+	td.AccessToken, err = at.SignedString([]byte(helpers.GetEnv("ACCESS_TOKEN_SECRET")))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return token, nil
+	//Creating Refresh Token
+	rtExp, err := strconv.Atoi(helpers.GetEnv("REFRESH_TOKEN_EXP_HOUR"))
+	if err != nil {
+		return nil, err
+	}
+
+	td.RtExpires = time.Now().Add(time.Hour * time.Duration(rtExp)).Unix()
+	td.RefreshUuid = uuid.NewV4().String()
+
+	rtClaims := jwt.MapClaims{}
+	rtClaims["authorized"] = true
+	rtClaims["user_id"] = userId
+	rtClaims["exp"] = td.AtExpires
+
+	rt := jwt.NewWithClaims(jwt.SigningMethodHS256, rtClaims)
+	td.RefreshToken, err = rt.SignedString([]byte(helpers.GetEnv("REFRESH_TOKEN_SECRET")))
+	if err != nil {
+		return nil, err
+	}
+
+	return td, nil
 }

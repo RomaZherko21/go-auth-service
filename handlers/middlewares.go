@@ -10,11 +10,16 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v7"
 )
 
-func InitMiddlewares(r *gin.Engine, db *sql.DB) {
+func InitMiddlewares(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
 	r.Use(func(c *gin.Context) {
 		setDbMiddleware(c, db)
+	})
+
+	r.Use(func(c *gin.Context) {
+		setRedisDbMiddleware(c, redisDb)
 	})
 
 	r.Use(func(c *gin.Context) {
@@ -24,6 +29,11 @@ func InitMiddlewares(r *gin.Engine, db *sql.DB) {
 
 func setDbMiddleware(c *gin.Context, db *sql.DB) {
 	c.Set("db", db)
+	c.Next()
+}
+
+func setRedisDbMiddleware(c *gin.Context, redisDb *redis.Client) {
+	c.Set("redisDb", redisDb)
 	c.Next()
 }
 

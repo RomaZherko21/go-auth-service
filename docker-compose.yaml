@@ -10,6 +10,10 @@ x-db-variables: &db-variables
 x-api-variables: &api-variables
   SERVER_PORT: ${SERVER_PORT}
 
+x-redis-variables: &redis-variables
+  REDIS_PORT: ${REDIS_PORT}
+  REDIS_PASSWORD: ${REDIS_PASSWORD}
+
 services:
   # api:
   #   image: golang:1.12.7
@@ -38,6 +42,15 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_PORT: ${DB_PORT}
 
+  redis:
+    container_name: redis
+    image: redis:7.0.11
+    ports:
+      - ${REDIS_PORT}:6379
+    command: redis-server --loglevel warning --requirepass ${REDIS_PASSWORD}
+    volumes: 
+      - redis-volume:/data
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin4
@@ -55,5 +68,5 @@ services:
 
 volumes:
   db_volume:
-  # api_volume:
   pgadmin_volume:
+  redis-volume:

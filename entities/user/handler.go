@@ -3,12 +3,18 @@ package user
 import (
 	"exampleApi/helpers"
 	"exampleApi/helpers/log"
+	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v7"
 )
 
 func SignIn(c *gin.Context) {
+	redisDb := c.MustGet("redisDb").(*redis.Client)
+
 	var user User
 
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -17,31 +23,47 @@ func SignIn(c *gin.Context) {
 		return
 	}
 
-	password, err := UserServiceInstance.GetUserPassword(c, &user)
+	userMeta, err := UserServiceInstance.GetUserPassword(c, &user)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	isAuth := isPasswordCorrect(user.Password, password)
+	if isPasswordCorrect := checkPassword(user.Password, userMeta.Password); !isPasswordCorrect {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong email or password"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, fmt.Sprintf("wrong email or password on uid: %v", userMeta.ID))
+		return
+	}
 
-	accessToken, err := createToken(user.Email)
+	tokenDetails, err := createTokens(userMeta.ID)
+
+	at := time.Unix(tokenDetails.AtExpires, 0) //converting Unix to UTC(to Time object)
+	rt := time.Unix(tokenDetails.RtExpires, 0)
+	now := time.Now()
+
+	errAccess := redisDb.Set(tokenDetails.AccessUuid, strconv.Itoa(int(userMeta.ID)), at.Sub(now)).Err()
+	if errAccess != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "something went wrong"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
+	errRefresh := redisDb.Set(tokenDetails.RefreshUuid, strconv.Itoa(int(userMeta.ID)), rt.Sub(now)).Err()
+	if errRefresh != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "something went wrong"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
 		log.HttpLog(c, log.Warn, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	if isAuth {
-		c.JSON(http.StatusOK, gin.H{"access_token": accessToken})
-		log.HttpLog(c, log.Warn, http.StatusBadRequest, "user authenticated")
-		return
-	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong email or password"})
-		log.HttpLog(c, log.Warn, http.StatusBadRequest, "wrong email or password")
-		return
-	}
+	c.JSON(http.StatusOK, gin.H{"access_token": tokenDetails})
+	log.HttpLog(c, log.Warn, http.StatusBadRequest, "user authenticated")
+
 }
 
 func SignUp(c *gin.Context) {

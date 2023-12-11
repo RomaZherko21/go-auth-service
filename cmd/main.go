@@ -14,17 +14,19 @@ import (
 )
 
 func init() {
-	config.InitLogger(helpers.GetEnv("LOG_LEVEL"))
+	config.InitLogger()
 }
 
 func main() {
+	redisDb := db.ConnectRedis()
+
 	dataBase := db.ConnectDb()
 
 	defer dataBase.Close()
 
 	router := gin.Default()
 
-	handlers.Handlers(router, dataBase)
+	handlers.Handlers(router, dataBase, redisDb)
 
 	var SERVER_PORT = helpers.GetEnv("SERVER_PORT")
 

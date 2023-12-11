@@ -1,13 +1,16 @@
 package config
 
 import (
+	"exampleApi/helpers"
 	"os"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func InitLogger(logLevel string) {
+func InitLogger() {
+	logLevel := helpers.GetEnv("LOG_LEVEL")
+
 	log.SetFormatter(&log.JSONFormatter{})
 
 	log.SetOutput(os.Stdout)

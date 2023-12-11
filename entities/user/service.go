@@ -2,6 +2,7 @@ package user
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,18 +10,20 @@ import (
 type UserService struct {
 }
 
-func (u *UserService) GetUserPassword(c *gin.Context, user *User) (string, error) {
+func (u *UserService) GetUserPassword(c *gin.Context, user *User) (User, error) {
+	result := User{}
+
 	db := c.MustGet("db").(*sql.DB)
 
-	sqlStatement := `SELECT password
+	sqlStatement := `SELECT password, id
 	FROM users
 	WHERE users.email=$1;`
 
-	var password string
+	err := db.QueryRow(sqlStatement, user.Email).Scan(&result.Password, &result.ID)
 
-	err := db.QueryRow(sqlStatement, user.Email).Scan(&password)
+	fmt.Println("EHHE", result)
 
-	return password, err
+	return result, err
 }
 
 func (u *UserService) CreateUser(c *gin.Context, user *User) error {

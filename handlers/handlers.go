@@ -5,13 +5,14 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v7"
 
 	"exampleApi/entities/user"
 )
 
-func Handlers(r *gin.Engine, db *sql.DB) {
+func Handlers(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
 
-	InitMiddlewares(r, db)
+	InitMiddlewares(r, db, redisDb)
 
 	r.POST("/signIn", user.SignIn)
 	r.POST("/signUp", user.SignUp)
