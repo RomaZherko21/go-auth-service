@@ -2,7 +2,6 @@ package user
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,8 +19,6 @@ func (u *UserService) GetUserPassword(c *gin.Context, user *User) (User, error) 
 	WHERE users.email=$1;`
 
 	err := db.QueryRow(sqlStatement, user.Email).Scan(&result.Password, &result.ID)
-
-	fmt.Println("EHHE", result)
 
 	return result, err
 }

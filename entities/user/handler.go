@@ -15,22 +15,22 @@ import (
 func SignIn(c *gin.Context) {
 	redisDb := c.MustGet("redisDb").(*redis.Client)
 
-	var user User
+	var body User
 
-	if err := c.ShouldBindJSON(&user); err != nil {
+	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	userMeta, err := UserServiceInstance.GetUserPassword(c, &user)
+	userMeta, err := UserServiceInstance.GetUserPassword(c, &body)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if isPasswordCorrect := checkPassword(user.Password, userMeta.Password); !isPasswordCorrect {
+	if isPasswordCorrect := checkPassword(body.Password, userMeta.Password); !isPasswordCorrect {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong email or password"})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, fmt.Sprintf("wrong email or password on uid: %v", userMeta.ID))
 		return
@@ -38,23 +38,23 @@ func SignIn(c *gin.Context) {
 
 	tokenDetails, err := createTokens(userMeta.ID)
 
-	at := time.Unix(tokenDetails.AtExpires, 0) //converting Unix to UTC(to Time object)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		log.HttpLog(c, log.Warn, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	at := time.Unix(tokenDetails.AtExpires, 0)
 	rt := time.Unix(tokenDetails.RtExpires, 0)
 	now := time.Now()
 
-	errAccess := redisDb.Set(tokenDetails.AccessUuid, strconv.Itoa(int(userMeta.ID)), at.Sub(now)).Err()
-	if errAccess != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "something went wrong"})
-		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+	err = redisDb.Set(tokenDetails.AccessUuid, strconv.Itoa(int(userMeta.ID)), at.Sub(now)).Err()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
+		log.HttpLog(c, log.Warn, http.StatusInternalServerError, err.Error())
 		return
 	}
-	errRefresh := redisDb.Set(tokenDetails.RefreshUuid, strconv.Itoa(int(userMeta.ID)), rt.Sub(now)).Err()
-	if errRefresh != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "something went wrong"})
-		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
-		return
-	}
-
+	err = redisDb.Set(tokenDetails.RefreshUuid, strconv.Itoa(int(userMeta.ID)), rt.Sub(now)).Err()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
 		log.HttpLog(c, log.Warn, http.StatusInternalServerError, err.Error())
@@ -63,7 +63,6 @@ func SignIn(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"access_token": tokenDetails})
 	log.HttpLog(c, log.Warn, http.StatusBadRequest, "user authenticated")
-
 }
 
 func SignUp(c *gin.Context) {
@@ -94,8 +93,8 @@ func SignUp(c *gin.Context) {
 	user.Password = password
 
 	if err := UserServiceInstance.CreateUser(c, &user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Warn, http.StatusInternalServerError, err.Error())
 		return
 	}
 
