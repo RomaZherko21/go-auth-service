@@ -30,13 +30,13 @@ func SignIn(c *gin.Context) {
 		return
 	}
 
-	if isPasswordCorrect := checkPassword(body.Password, userMeta.Password); !isPasswordCorrect {
+	if isPasswordCorrect := helpers.CheckPassword(body.Password, userMeta.Password); !isPasswordCorrect {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong email or password"})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, fmt.Sprintf("wrong email or password on uid: %v", userMeta.ID))
 		return
 	}
 
-	tokenDetails, err := createTokens(userMeta.ID)
+	tokenDetails, err := helpers.CreateTokens(userMeta.ID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
@@ -84,7 +84,7 @@ func SignUp(c *gin.Context) {
 		return
 	}
 
-	password, err := hashPassword(user.Password)
+	password, err := helpers.HashPassword(user.Password)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
