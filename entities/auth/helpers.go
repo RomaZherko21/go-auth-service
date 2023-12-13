@@ -1,4 +1,4 @@
-package user
+package auth
 
 import (
 	"exampleApi/helpers"
@@ -47,6 +47,7 @@ func createTokens(userId int) (*TokenDetails, error) {
 
 	atClaims := jwt.MapClaims{}
 	atClaims["authorized"] = true
+	atClaims["access_uuid"] = td.AccessUuid
 	atClaims["user_id"] = userId
 	atClaims["exp"] = td.AtExpires
 
@@ -67,6 +68,7 @@ func createTokens(userId int) (*TokenDetails, error) {
 
 	rtClaims := jwt.MapClaims{}
 	rtClaims["authorized"] = true
+	rtClaims["refresh_uuid"] = td.RefreshUuid
 	rtClaims["user_id"] = userId
 	rtClaims["exp"] = td.AtExpires
 

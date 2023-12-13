@@ -5,10 +5,8 @@ import (
 	"exampleApi/helpers"
 	"exampleApi/helpers/log"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v7"
 )
@@ -33,7 +31,7 @@ func setDbMiddleware(c *gin.Context, db *sql.DB) {
 }
 
 func setRedisDbMiddleware(c *gin.Context, redisDb *redis.Client) {
-	c.Set("redisDb", redisDb)
+	c.Set("redis_db", redisDb)
 	c.Next()
 }
 
@@ -44,22 +42,7 @@ func setStartTime(c *gin.Context) {
 }
 
 func authMiddleware(c *gin.Context) {
-	authorization := c.GetHeader("authorization")
-
-	tokenFields := strings.Fields(authorization)
-
-	if len(tokenFields) != 2 {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "no access token"})
-		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "no access token")
-		c.Abort()
-		return
-	}
-
-	tokenString := tokenFields[1]
-
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return []byte(helpers.GetEnv("ACCESS_TOKEN_SECRET")), nil
-	})
+	_, err := helpers.ParseToken(c.GetHeader("authorization"), helpers.GetEnv("ACCESS_TOKEN_SECRET"))
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -68,15 +51,7 @@ func authMiddleware(c *gin.Context) {
 		return
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-
-	if !ok || !token.Valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "token invalid")
-		c.Abort()
-		return
-	}
-	c.Set("userId", claims["user_id"])
+	// c.Set("userId", claims["user_id"])
 
 	c.Next()
 }

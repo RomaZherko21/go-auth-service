@@ -1,4 +1,4 @@
-package user
+package auth
 
 import (
 	"exampleApi/helpers"
@@ -13,7 +13,7 @@ import (
 )
 
 func SignIn(c *gin.Context) {
-	redisDb := c.MustGet("redisDb").(*redis.Client)
+	redisDb := c.MustGet("redis_db").(*redis.Client)
 
 	var body User
 
@@ -61,6 +61,8 @@ func SignIn(c *gin.Context) {
 		return
 	}
 
+	c.Set("user_id", userMeta.ID)
+
 	c.JSON(http.StatusOK, gin.H{"access_token": tokenDetails})
 	log.HttpLog(c, log.Warn, http.StatusBadRequest, "user authenticated")
 }
@@ -100,4 +102,33 @@ func SignUp(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "User created successfully"})
 	log.HttpLog(c, log.Info, http.StatusOK, "User created successfully")
+}
+
+func SignOut(c *gin.Context) {
+	claims, err := helpers.ParseToken(c.GetHeader("authorization"), helpers.GetEnv("ACCESS_TOKEN_SECRET"))
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	accessUuid, ok := claims["access_uuid"].(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cant get access_uuid claim"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, "cant get access_uuid claim")
+		return
+	}
+
+	redisDb := c.MustGet("redis_db").(*redis.Client)
+
+	_, err = redisDb.Del(accessUuid).Result()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cant delete access token"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, "cant delete access token")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User sign out"})
+	log.HttpLog(c, log.Info, http.StatusOK, "User sign out")
 }

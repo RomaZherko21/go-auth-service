@@ -7,15 +7,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v7"
 
-	"exampleApi/entities/user"
+	"exampleApi/entities/auth"
 )
 
 func Handlers(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
 
 	InitMiddlewares(r, db, redisDb)
 
-	r.POST("/signIn", user.SignIn)
-	r.POST("/signUp", user.SignUp)
+	r.POST("/signUp", auth.SignUp)
+	r.POST("/signIn", auth.SignIn)
+	r.POST("/signOut", authMiddleware, auth.SignOut)
 
 	r.GET("/private", authMiddleware, func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "This is a private route"})
