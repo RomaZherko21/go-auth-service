@@ -14,9 +14,10 @@ func Handlers(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
 
 	InitMiddlewares(r, db, redisDb)
 
-	r.POST("/signUp", auth.SignUp)
-	r.POST("/signIn", auth.SignIn)
-	r.POST("/signOut", authMiddleware, auth.SignOut)
+	r.POST("/auth/signUp", auth.SignUp)
+	r.POST("/auth/signIn", auth.SignIn)
+	r.POST("/auth/signOut", authMiddleware, auth.SignOut)
+	r.POST("/auth/refresh", authMiddleware, auth.Refresh)
 
 	r.GET("/private", authMiddleware, func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "This is a private route"})

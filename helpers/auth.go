@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-redis/redis/v7"
 
 	"strconv"
 	"time"
@@ -84,17 +85,19 @@ func CreateTokens(userId int) (*TokenDetails, error) {
 	return td, nil
 }
 
-func ParseToken(authorization string, tokenSecret string) (jwt.MapClaims, error) {
-	tokenFields := strings.Fields(authorization)
+func GetAuthorizationToken(authHeader string) (string, error) {
+	tokenFields := strings.Fields(authHeader)
 
 	if len(tokenFields) != 2 {
-		return nil, errors.New("invalid token")
+		return "", errors.New("there is no authorization token")
 	}
 
-	tokenString := tokenFields[1]
+	return tokenFields[1], nil
+}
 
+func ParseToken(tokenString string, tokenSecret string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return []byte(GetEnv(tokenSecret)), nil
+		return []byte(tokenSecret), nil
 	})
 
 	if err != nil {
@@ -104,8 +107,24 @@ func ParseToken(authorization string, tokenSecret string) (jwt.MapClaims, error)
 	claims, ok := token.Claims.(jwt.MapClaims)
 
 	if !ok || !token.Valid {
-		return nil, errors.New("invalid token")
+		return nil, errors.New("cant parse invalid token")
 	}
 
 	return claims, nil
+}
+
+func SetTokensToRedis(redis *redis.Client, userid int, td *TokenDetails) error {
+	at := time.Unix(td.AtExpires, 0)
+	rt := time.Unix(td.RtExpires, 0)
+	now := time.Now()
+
+	err := redis.Set(td.AccessUuid, strconv.Itoa(userid), at.Sub(now)).Err()
+	if err != nil {
+		return err
+	}
+	err = redis.Set(td.RefreshUuid, strconv.Itoa(userid), rt.Sub(now)).Err()
+	if err != nil {
+		return err
+	}
+	return nil
 }

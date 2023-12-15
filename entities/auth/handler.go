@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v7"
 )
@@ -44,26 +44,16 @@ func SignIn(c *gin.Context) {
 		return
 	}
 
-	at := time.Unix(tokenDetails.AtExpires, 0)
-	rt := time.Unix(tokenDetails.RtExpires, 0)
-	now := time.Now()
-
-	err = redisDb.Set(tokenDetails.AccessUuid, strconv.Itoa(int(userMeta.ID)), at.Sub(now)).Err()
+	err = helpers.SetTokensToRedis(redisDb, userMeta.ID, tokenDetails)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
-		log.HttpLog(c, log.Warn, http.StatusInternalServerError, err.Error())
-		return
-	}
-	err = redisDb.Set(tokenDetails.RefreshUuid, strconv.Itoa(int(userMeta.ID)), rt.Sub(now)).Err()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "something went wrong"})
-		log.HttpLog(c, log.Warn, http.StatusInternalServerError, err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cant set tokens to redis"})
+		log.HttpLog(c, log.Warn, http.StatusInternalServerError, fmt.Sprintf("Cant set tokens to redis: %v", err.Error()))
 		return
 	}
 
 	c.Set("user_id", userMeta.ID)
 
-	c.JSON(http.StatusOK, gin.H{"access_token": tokenDetails})
+	c.JSON(http.StatusOK, gin.H{"access_token": tokenDetails.AccessToken, "refresh_token": tokenDetails.RefreshToken, "at_expires": tokenDetails.AtExpires, "rt_expires": tokenDetails.RtExpires})
 	log.HttpLog(c, log.Warn, http.StatusBadRequest, "user authenticated")
 }
 
@@ -105,7 +95,15 @@ func SignUp(c *gin.Context) {
 }
 
 func SignOut(c *gin.Context) {
-	claims, err := helpers.ParseToken(c.GetHeader("authorization"), helpers.GetEnv("ACCESS_TOKEN_SECRET"))
+	authToken, err := helpers.GetAuthorizationToken(c.GetHeader("authorization"))
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	claims, err := helpers.ParseToken(authToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -131,4 +129,75 @@ func SignOut(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "User sign out"})
 	log.HttpLog(c, log.Info, http.StatusOK, "User sign out")
+}
+
+func Refresh(c *gin.Context) {
+	type RefreshToken struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	var body RefreshToken
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	token, err := jwt.Parse(body.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+		return []byte(helpers.GetEnv("REFRESH_TOKEN_SECRET")), nil
+	})
+
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "refresh expired"})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "refresh expired")
+		return
+	}
+
+	refreshUuid, ok := claims["refresh_uuid"].(string)
+	if !ok {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "refresh expired"})
+		log.HttpLog(c, log.Warn, http.StatusUnprocessableEntity, "refresh expired")
+		return
+	}
+
+	userId, err := strconv.ParseUint(fmt.Sprintf("%.f", claims["user_id"]), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, "Error occurred")
+		return
+	}
+
+	redisDb := c.MustGet("redis_db").(*redis.Client)
+	_, err = redisDb.Del(refreshUuid).Result()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cant delete refresh token"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, "cant delete refresh token")
+		return
+	}
+
+	tokenDetails, createErr := helpers.CreateTokens(int(userId))
+	if createErr != nil {
+		c.JSON(http.StatusForbidden, createErr.Error())
+		return
+	}
+
+	err = helpers.SetTokensToRedis(redisDb, int(userId), tokenDetails)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cant set tokens to redis"})
+		log.HttpLog(c, log.Warn, http.StatusInternalServerError, fmt.Sprintf("Cant set tokens to redis: %v", err.Error()))
+		return
+	}
+
+	tokens := map[string]string{
+		"access_token":  tokenDetails.AccessToken,
+		"refresh_token": tokenDetails.RefreshToken,
+	}
+
+	c.JSON(http.StatusCreated, tokens)
 }

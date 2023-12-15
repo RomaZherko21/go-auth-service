@@ -42,7 +42,15 @@ func setStartTime(c *gin.Context) {
 }
 
 func authMiddleware(c *gin.Context) {
-	_, err := helpers.ParseToken(c.GetHeader("authorization"), helpers.GetEnv("ACCESS_TOKEN_SECRET"))
+	authToken, err := helpers.GetAuthorizationToken(c.GetHeader("authorization"))
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	_, err = helpers.ParseToken(authToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
