@@ -95,7 +95,7 @@ func SignUp(c *gin.Context) {
 }
 
 func SignOut(c *gin.Context) {
-	authToken, err := helpers.GetAuthorizationToken(c.GetHeader("authorization"))
+	authToken, err := helpers.ExtractAccessToken(c.GetHeader("authorization"))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

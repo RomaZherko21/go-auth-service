@@ -42,7 +42,7 @@ func setStartTime(c *gin.Context) {
 }
 
 func authMiddleware(c *gin.Context) {
-	authToken, err := helpers.GetAuthorizationToken(c.GetHeader("authorization"))
+	authToken, err := helpers.ExtractAccessToken(c.GetHeader("authorization"))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -53,7 +53,7 @@ func authMiddleware(c *gin.Context) {
 	_, err = helpers.ParseToken(authToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
 		log.HttpLog(c, log.Warn, http.StatusUnauthorized, err.Error())
 		c.Abort()
 		return

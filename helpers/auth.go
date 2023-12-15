@@ -85,7 +85,7 @@ func CreateTokens(userId int) (*TokenDetails, error) {
 	return td, nil
 }
 
-func GetAuthorizationToken(authHeader string) (string, error) {
+func ExtractAccessToken(authHeader string) (string, error) {
 	tokenFields := strings.Fields(authHeader)
 
 	if len(tokenFields) != 2 {
