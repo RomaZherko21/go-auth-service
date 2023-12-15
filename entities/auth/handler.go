@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"exampleApi/helpers"
 	"exampleApi/helpers/log"
 	"fmt"
@@ -9,7 +10,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 )
 
 func SignIn(c *gin.Context) {
@@ -127,7 +128,7 @@ func SignOut(c *gin.Context) {
 
 	redisDb := c.MustGet("redis_db").(*redis.Client)
 
-	_, err = redisDb.Del(accessUuid).Result()
+	_, err = redisDb.Del(context.Background(), accessUuid).Result()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "cant delete access token"})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, "cant delete access token")
@@ -181,7 +182,7 @@ func Refresh(c *gin.Context) {
 	}
 
 	redisDb := c.MustGet("redis_db").(*redis.Client)
-	_, err = redisDb.Del(refreshUuid).Result()
+	_, err = redisDb.Del(context.Background(), refreshUuid).Result()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "cant delete refresh token"})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, "cant delete refresh token")

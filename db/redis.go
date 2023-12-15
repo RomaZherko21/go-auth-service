@@ -1,9 +1,10 @@
 package db
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
 
 	"exampleApi/helpers"
@@ -21,7 +22,7 @@ func ConnectRedis() *redis.Client {
 		Password: password,
 	})
 
-	_, err := client.Ping().Result()
+	_, err := client.Ping(context.Background()).Result()
 	if err != nil {
 		log.Panicf("Redis connection: %v", err)
 	}

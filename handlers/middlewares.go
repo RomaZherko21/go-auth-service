@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"exampleApi/helpers"
 	"exampleApi/helpers/log"
@@ -8,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 )
 
 func InitMiddlewares(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
@@ -76,8 +77,8 @@ func authMiddleware(c *gin.Context) {
 
 	redisDb := c.MustGet("redis_db").(*redis.Client)
 
-	isTokenExists, err := redisDb.Exists(accessUuid).Result()
-	if isTokenExists == 0 || err != nil {
+	val, err := redisDb.Get(context.Background(), accessUuid).Result()
+	if len(val) == 0 || err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
 		log.HttpLog(c, log.Warn, http.StatusUnauthorized, err.Error())
 		c.Abort()

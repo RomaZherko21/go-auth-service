@@ -1,11 +1,12 @@
 package helpers
 
 import (
+	"context"
 	"errors"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 
 	"strconv"
 	"time"
@@ -127,11 +128,11 @@ func SetTokensToRedis(redis *redis.Client, userid int, td *TokenDetails) error {
 	rt := time.Unix(td.RtExpires, 0)
 	now := time.Now()
 
-	err := redis.Set(td.AccessUuid, strconv.Itoa(userid), at.Sub(now)).Err()
+	err := redis.Set(context.Background(), td.AccessUuid, strconv.Itoa(userid), at.Sub(now)).Err()
 	if err != nil {
 		return err
 	}
-	err = redis.Set(td.RefreshUuid, strconv.Itoa(userid), rt.Sub(now)).Err()
+	err = redis.Set(context.Background(), td.RefreshUuid, strconv.Itoa(userid), rt.Sub(now)).Err()
 	if err != nil {
 		return err
 	}
