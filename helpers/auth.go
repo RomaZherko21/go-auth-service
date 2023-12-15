@@ -2,9 +2,9 @@ package helpers
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v7"
 
 	"strconv"
@@ -85,14 +85,23 @@ func CreateTokens(userId int) (*TokenDetails, error) {
 	return td, nil
 }
 
-func ExtractAccessToken(authHeader string) (string, error) {
-	tokenFields := strings.Fields(authHeader)
+type Tokens struct {
+	AccessToken  string
+	RefreshToken string
+}
 
-	if len(tokenFields) != 2 {
-		return "", errors.New("there is no authorization token")
+func ExtractTokens(c *gin.Context) (*Tokens, error) {
+	accessToken, err := c.Cookie("access_token")
+	if err != nil {
+		return nil, err
 	}
 
-	return tokenFields[1], nil
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil {
+		return nil, err
+	}
+
+	return &Tokens{AccessToken: accessToken, RefreshToken: refreshToken}, nil
 }
 
 func ParseToken(tokenString string, tokenSecret string) (jwt.MapClaims, error) {
@@ -126,5 +135,22 @@ func SetTokensToRedis(redis *redis.Client, userid int, td *TokenDetails) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func SetTokensToCookie(c *gin.Context, tokenDetails *TokenDetails) error {
+	atExp, err := strconv.Atoi(GetEnv("ACCESS_TOKEN_EXP_MIN"))
+	if err != nil {
+		return err
+	}
+
+	rtExp, err := strconv.Atoi(GetEnv("REFRESH_TOKEN_EXP_HOUR"))
+	if err != nil {
+		return err
+	}
+
+	c.SetCookie("access_token", tokenDetails.AccessToken, int((time.Duration(atExp) * time.Minute).Seconds()), "/", "", false, true)
+	c.SetCookie("refresh_token", tokenDetails.RefreshToken, int((time.Duration(rtExp) * time.Hour).Seconds()), "/", "", false, true)
+
 	return nil
 }

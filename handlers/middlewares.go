@@ -42,15 +42,22 @@ func setStartTime(c *gin.Context) {
 }
 
 func authMiddleware(c *gin.Context) {
-	authToken, err := helpers.ExtractAccessToken(c.GetHeader("authorization"))
+	tokens, err := helpers.ExtractTokens(c)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		c.Abort()
 		return
 	}
 
-	_, err = helpers.ParseToken(authToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Access token cookie not found"})
+		c.Abort()
+		return
+	}
+
+	claims, err := helpers.ParseToken(tokens.AccessToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
@@ -59,7 +66,23 @@ func authMiddleware(c *gin.Context) {
 		return
 	}
 
-	// c.Set("userId", claims["user_id"])
+	accessUuid, ok := claims["access_uuid"].(string)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "no access_uuid in token")
+		c.Abort()
+		return
+	}
+
+	redisDb := c.MustGet("redis_db").(*redis.Client)
+
+	isTokenExists, err := redisDb.Exists(accessUuid).Result()
+	if isTokenExists == 0 || err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, err.Error())
+		c.Abort()
+		return
+	}
 
 	c.Next()
 }

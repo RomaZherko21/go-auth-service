@@ -53,7 +53,14 @@ func SignIn(c *gin.Context) {
 
 	c.Set("user_id", userMeta.ID)
 
-	c.JSON(http.StatusOK, gin.H{"access_token": tokenDetails.AccessToken, "refresh_token": tokenDetails.RefreshToken, "at_expires": tokenDetails.AtExpires, "rt_expires": tokenDetails.RtExpires})
+	err = helpers.SetTokensToCookie(c, tokenDetails)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cant set tokens to cookie"})
+		log.HttpLog(c, log.Warn, http.StatusInternalServerError, fmt.Sprintf("Cant set tokens to cookie: %v", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "user authenticated"})
 	log.HttpLog(c, log.Warn, http.StatusBadRequest, "user authenticated")
 }
 
@@ -95,7 +102,7 @@ func SignUp(c *gin.Context) {
 }
 
 func SignOut(c *gin.Context) {
-	authToken, err := helpers.ExtractAccessToken(c.GetHeader("authorization"))
+	tokens, err := helpers.ExtractTokens(c)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -103,7 +110,7 @@ func SignOut(c *gin.Context) {
 		return
 	}
 
-	claims, err := helpers.ParseToken(authToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
+	claims, err := helpers.ParseToken(tokens.AccessToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
