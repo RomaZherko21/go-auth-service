@@ -52,8 +52,6 @@ func SignIn(c *gin.Context) {
 		return
 	}
 
-	c.Set("user_id", userMeta.ID)
-
 	err = helpers.SetTokensToCookie(c, tokenDetails)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cant set tokens to cookie"})
@@ -62,7 +60,7 @@ func SignIn(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "user authenticated"})
-	log.HttpLog(c, log.Warn, http.StatusBadRequest, "user authenticated")
+	log.HttpLog(c, log.Warn, http.StatusOK, "user authenticated")
 }
 
 func SignUp(c *gin.Context) {
@@ -111,47 +109,72 @@ func SignOut(c *gin.Context) {
 		return
 	}
 
+	// remove access token from redis
+	redisDb := c.MustGet("redis_db").(*redis.Client)
+
 	claims, err := helpers.ParseToken(tokens.AccessToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	accessUuid, ok := claims["access_uuid"].(string)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "cant get access_uuid claim"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "cant get access_uuid claim"})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, "cant get access_uuid claim")
 		return
 	}
 
-	redisDb := c.MustGet("redis_db").(*redis.Client)
-
 	_, err = redisDb.Del(context.Background(), accessUuid).Result()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "cant delete access token"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "cant delete access token"})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, "cant delete access token")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "User sign out"})
-	log.HttpLog(c, log.Info, http.StatusOK, "User sign out")
-}
+	// remove refresh token from redis
+	claims, err = helpers.ParseToken(tokens.RefreshToken, helpers.GetEnv("REFRESH_TOKEN_SECRET"))
 
-func Refresh(c *gin.Context) {
-	type RefreshToken struct {
-		RefreshToken string `json:"refresh_token"`
-	}
-	var body RefreshToken
-
-	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	token, err := jwt.Parse(body.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+	refreshUuid, ok := claims["refresh_uuid"].(string)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "cant get refresh_uuid claim"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, "cant get refresh_uuid claim")
+		return
+	}
+
+	_, err = redisDb.Del(context.Background(), refreshUuid).Result()
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "cant delete refresh token"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, "cant delete refresh token")
+		return
+	}
+
+	c.SetCookie("access_token", "", -1, "/", "", false, true)
+	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+
+	c.JSON(http.StatusUnauthorized, gin.H{"message": "User sign out"})
+	log.HttpLog(c, log.Info, http.StatusUnauthorized, "User sign out")
+}
+
+func Refresh(c *gin.Context) {
+	tokens, err := helpers.ExtractTokens(c)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cant extract tokens"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// remove refresh token
+	token, err := jwt.Parse(tokens.RefreshToken, func(token *jwt.Token) (interface{}, error) {
 		return []byte(helpers.GetEnv("REFRESH_TOKEN_SECRET")), nil
 	})
 
@@ -189,6 +212,21 @@ func Refresh(c *gin.Context) {
 		return
 	}
 
+	// remove access token
+	token, err = jwt.Parse(tokens.AccessToken, func(token *jwt.Token) (interface{}, error) {
+		return []byte(helpers.GetEnv("ACCESS_TOKEN_SECRET")), nil
+	})
+
+	if err == nil {
+		claims, ok = token.Claims.(jwt.MapClaims)
+
+		if ok {
+			accessUuid := claims["access_uuid"].(string)
+
+			redisDb.Del(context.Background(), accessUuid)
+		}
+	}
+
 	tokenDetails, createErr := helpers.CreateTokens(int(userId))
 	if createErr != nil {
 		c.JSON(http.StatusForbidden, createErr.Error())
@@ -202,10 +240,13 @@ func Refresh(c *gin.Context) {
 		return
 	}
 
-	tokens := map[string]string{
-		"access_token":  tokenDetails.AccessToken,
-		"refresh_token": tokenDetails.RefreshToken,
+	err = helpers.SetTokensToCookie(c, tokenDetails)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cant set tokens to cookie"})
+		log.HttpLog(c, log.Warn, http.StatusInternalServerError, fmt.Sprintf("Cant set tokens to cookie: %v", err.Error()))
+		return
 	}
 
-	c.JSON(http.StatusCreated, tokens)
+	c.JSON(http.StatusOK, gin.H{"message": "refresh successfully"})
+	log.HttpLog(c, log.Warn, http.StatusOK, "refresh successfully")
 }

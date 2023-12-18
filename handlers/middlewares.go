@@ -52,12 +52,6 @@ func authMiddleware(c *gin.Context) {
 		return
 	}
 
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Access token cookie not found"})
-		c.Abort()
-		return
-	}
-
 	claims, err := helpers.ParseToken(tokens.AccessToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
 
 	if err != nil {
@@ -84,6 +78,16 @@ func authMiddleware(c *gin.Context) {
 		c.Abort()
 		return
 	}
+
+	userId, ok := claims["user_id"]
+
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "no user_id in token")
+		c.Abort()
+		return
+	}
+	c.Set("user_id", userId)
 
 	c.Next()
 }
