@@ -165,16 +165,19 @@ func SignOut(c *gin.Context) {
 }
 
 func Refresh(c *gin.Context) {
-	tokens, err := helpers.ExtractTokens(c)
-
+	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "cant extract tokens"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cant extract refresh token"})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
 		return
 	}
+	fmt.Println("HE", refreshToken)
 
 	// remove refresh token
-	token, err := jwt.Parse(tokens.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return []byte(helpers.GetEnv("REFRESH_TOKEN_SECRET")), nil
 	})
 
@@ -212,18 +215,21 @@ func Refresh(c *gin.Context) {
 		return
 	}
 
-	// remove access token
-	token, err = jwt.Parse(tokens.AccessToken, func(token *jwt.Token) (interface{}, error) {
-		return []byte(helpers.GetEnv("ACCESS_TOKEN_SECRET")), nil
-	})
+	// remove access token if exists
+	accessToken, accessErr := c.Cookie("access_token")
+	if accessErr == nil {
+		parsedAccessToken, accessErr := jwt.Parse(accessToken, func(token *jwt.Token) (interface{}, error) {
+			return []byte(helpers.GetEnv("ACCESS_TOKEN_SECRET")), nil
+		})
 
-	if err == nil {
-		claims, ok = token.Claims.(jwt.MapClaims)
+		if accessErr == nil {
+			accessClaims, accessOk := parsedAccessToken.Claims.(jwt.MapClaims)
 
-		if ok {
-			accessUuid := claims["access_uuid"].(string)
+			if accessOk {
+				accessUuid := accessClaims["access_uuid"].(string)
 
-			redisDb.Del(context.Background(), accessUuid)
+				redisDb.Del(context.Background(), accessUuid)
+			}
 		}
 	}
 

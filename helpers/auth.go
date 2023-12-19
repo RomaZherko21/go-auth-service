@@ -75,7 +75,7 @@ func CreateTokens(userId int) (*TokenDetails, error) {
 	rtClaims["authorized"] = true
 	rtClaims["refresh_uuid"] = td.RefreshUuid
 	rtClaims["user_id"] = userId
-	rtClaims["exp"] = td.AtExpires
+	rtClaims["exp"] = td.RtExpires
 
 	rt := jwt.NewWithClaims(jwt.SigningMethodHS256, rtClaims)
 	td.RefreshToken, err = rt.SignedString([]byte(GetEnv("REFRESH_TOKEN_SECRET")))

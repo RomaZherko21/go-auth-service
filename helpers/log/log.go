@@ -18,10 +18,6 @@ const (
 	Info
 )
 
-func (l LogLevel) String() string {
-	return [...]string{"North", "East", "South", "West"}[l]
-}
-
 func HttpLog(c *gin.Context, level LogLevel, httpStatus int, message string) {
 	startTime := c.MustGet("startTime")
 
