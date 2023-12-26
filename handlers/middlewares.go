@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"exampleApi/consts"
 	"exampleApi/helpers"
 	"exampleApi/helpers/log"
 	"net/http"
@@ -42,7 +43,7 @@ func setStartTime(c *gin.Context) {
 }
 
 func authMiddleware(c *gin.Context) {
-	accessToken, err := c.Cookie("access_token")
+	accessToken, err := c.Cookie(consts.ACCESS_TOKEN)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())

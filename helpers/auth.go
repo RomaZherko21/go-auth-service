@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"errors"
+	"exampleApi/consts"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -145,7 +146,7 @@ func SetAccessTokenCookie(c *gin.Context, token string) error {
 		return err
 	}
 
-	c.SetCookie("access_token", token, int((time.Duration(atExp) * time.Minute).Seconds()), "/", "", false, true)
+	c.SetCookie(consts.ACCESS_TOKEN, token, int((time.Duration(atExp) * time.Minute).Seconds()), "/", "", false, true)
 
 	return nil
 }
@@ -156,7 +157,7 @@ func SetRefreshTokenCookie(c *gin.Context, token string) error {
 		return err
 	}
 
-	c.SetCookie("refresh_token", token, int((time.Duration(rtExp) * time.Minute).Seconds()), "/", "", false, true)
+	c.SetCookie(consts.REFRESH_TOKEN, token, int((time.Duration(rtExp) * time.Minute).Seconds()), "/", "", false, true)
 
 	return nil
 }

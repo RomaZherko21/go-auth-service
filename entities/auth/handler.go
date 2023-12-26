@@ -2,13 +2,15 @@ package auth
 
 import (
 	"context"
-	"exampleApi/helpers"
-	"exampleApi/helpers/log"
 	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+
+	"exampleApi/consts"
+	"exampleApi/helpers"
+	"exampleApi/helpers/log"
 )
 
 func SignIn(c *gin.Context) {
@@ -103,7 +105,7 @@ func SignUp(c *gin.Context) {
 }
 
 func SignOut(c *gin.Context) {
-	refreshToken, err := c.Cookie("refresh_token")
+	refreshToken, err := c.Cookie(consts.REFRESH_TOKEN)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "can't extract refresh token"})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
@@ -126,15 +128,15 @@ func SignOut(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("access_token", "", -1, "/", "", false, true)
-	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+	c.SetCookie(consts.ACCESS_TOKEN, "", -1, "/", "", false, true)
+	c.SetCookie(consts.REFRESH_TOKEN, "", -1, "/", "", false, true)
 
 	c.JSON(http.StatusUnauthorized, gin.H{"message": "User sign out"})
 	log.HttpLog(c, log.Info, http.StatusUnauthorized, "User sign out")
 }
 
 func Refresh(c *gin.Context) {
-	refreshToken, err := c.Cookie("refresh_token")
+	refreshToken, err := c.Cookie(consts.REFRESH_TOKEN)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "cant extract refresh token"})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
@@ -223,8 +225,8 @@ func SignOutFromAllDevices(c *gin.Context) {
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, fmt.Sprintf("Cant remove refresh token of user: %v. Err: %v", userId, err.Error()))
 	}
 
-	c.SetCookie("access_token", "", -1, "/", "", false, true)
-	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+	c.SetCookie(consts.ACCESS_TOKEN, "", -1, "/", "", false, true)
+	c.SetCookie(consts.REFRESH_TOKEN, "", -1, "/", "", false, true)
 
 	c.JSON(http.StatusUnauthorized, gin.H{"message": "User sign out from all devices"})
 	log.HttpLog(c, log.Info, http.StatusUnauthorized, "User sign out from all devices")
