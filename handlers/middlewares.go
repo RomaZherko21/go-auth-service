@@ -14,26 +14,18 @@ import (
 
 func InitMiddlewares(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
 	r.Use(func(c *gin.Context) {
-		setDbMiddleware(c, db)
+		c.Set("db", db)
+		c.Next()
 	})
 
 	r.Use(func(c *gin.Context) {
-		setRedisDbMiddleware(c, redisDb)
+		c.Set("redis_db", redisDb)
+		c.Next()
 	})
 
 	r.Use(func(c *gin.Context) {
 		setStartTime(c)
 	})
-}
-
-func setDbMiddleware(c *gin.Context, db *sql.DB) {
-	c.Set("db", db)
-	c.Next()
-}
-
-func setRedisDbMiddleware(c *gin.Context, redisDb *redis.Client) {
-	c.Set("redis_db", redisDb)
-	c.Next()
 }
 
 func setStartTime(c *gin.Context) {
