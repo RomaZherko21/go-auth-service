@@ -3,6 +3,8 @@ package helpers
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
@@ -27,19 +29,15 @@ func CheckPassword(password string, hashedPassword string) bool {
 	return err == nil
 }
 
-type TokenDetails struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	AccessUuid   string `json:"access_uuid"`
-	RefreshUuid  string `json:"refresh_uuid"`
-	AtExpires    int64  `json:"at_expires"`
-	RtExpires    int64  `json:"rt_expires"`
+type AccessTokenDetails struct {
+	AccessToken string `json:"access_token"`
+	AtExpires   int64  `json:"at_expires"`
 }
 
-func CreateTokens(userId int) (*TokenDetails, error) {
+func CreateAccessToken(userId int) (*AccessTokenDetails, error) {
 	var err error
 
-	td := &TokenDetails{}
+	td := &AccessTokenDetails{}
 
 	//Creating Access Token
 	atExp, err := strconv.Atoi(GetEnv("ACCESS_TOKEN_EXP_MIN"))
@@ -48,12 +46,10 @@ func CreateTokens(userId int) (*TokenDetails, error) {
 	}
 
 	td.AtExpires = time.Now().Add(time.Minute * time.Duration(atExp)).Unix()
-	td.AccessUuid = uuid.NewV4().String()
 
 	atClaims := jwt.MapClaims{}
-	atClaims["authorized"] = true
-	atClaims["access_uuid"] = td.AccessUuid
 	atClaims["user_id"] = userId
+	atClaims["role"] = "admin"
 	atClaims["exp"] = td.AtExpires
 
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
@@ -61,6 +57,22 @@ func CreateTokens(userId int) (*TokenDetails, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return td, nil
+}
+
+type RefreshTokenDetails struct {
+	RefreshToken string `json:"refresh_token"`
+	RefreshUuid  string `json:"refresh_uuid"`
+	RtExpires    int64  `json:"rt_expires"`
+}
+
+func CreateRefreshToken(headers http.Header, userId int) (*RefreshTokenDetails, error) {
+	var err error
+
+	td := &RefreshTokenDetails{}
+
+	userAgent := headers.Get("User-Agent")
 
 	//Creating Refresh Token
 	rtExp, err := strconv.Atoi(GetEnv("REFRESH_TOKEN_EXP_HOUR"))
@@ -72,9 +84,9 @@ func CreateTokens(userId int) (*TokenDetails, error) {
 	td.RefreshUuid = uuid.NewV4().String()
 
 	rtClaims := jwt.MapClaims{}
-	rtClaims["authorized"] = true
 	rtClaims["refresh_uuid"] = td.RefreshUuid
 	rtClaims["user_id"] = userId
+	rtClaims["user_agent"] = userAgent
 	rtClaims["exp"] = td.RtExpires
 
 	rt := jwt.NewWithClaims(jwt.SigningMethodHS256, rtClaims)
@@ -89,20 +101,6 @@ func CreateTokens(userId int) (*TokenDetails, error) {
 type Tokens struct {
 	AccessToken  string
 	RefreshToken string
-}
-
-func ExtractTokens(c *gin.Context) (*Tokens, error) {
-	accessToken, err := c.Cookie("access_token")
-	if err != nil {
-		return nil, err
-	}
-
-	refreshToken, err := c.Cookie("refresh_token")
-	if err != nil {
-		return nil, err
-	}
-
-	return &Tokens{AccessToken: accessToken, RefreshToken: refreshToken}, nil
 }
 
 func ParseToken(tokenString string, tokenSecret string) (jwt.MapClaims, error) {
@@ -123,35 +121,57 @@ func ParseToken(tokenString string, tokenSecret string) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
-func SetTokensToRedis(redis *redis.Client, userid int, td *TokenDetails) error {
-	at := time.Unix(td.AtExpires, 0)
-	rt := time.Unix(td.RtExpires, 0)
+func SetRefreshTokenToRedis(redis *redis.Client, refreshToken string) error {
+	claims, err := ParseToken(refreshToken, GetEnv("REFRESH_TOKEN_SECRET"))
+	if err != nil {
+		return errors.New("can't parse refresh token")
+	}
+
+	refreshUuid, ok := claims["refresh_uuid"].(string)
+	if !ok {
+		return errors.New("can't extract refresh_uuid claim")
+	}
+
+	userId, err := strconv.ParseUint(fmt.Sprintf("%.f", claims["user_id"]), 10, 64)
+	if err != nil {
+		return errors.New("can't extract user_id claim")
+	}
+
+	exp, err := strconv.ParseInt(fmt.Sprintf("%.f", claims["exp"]), 10, 64)
+	if err != nil {
+		return errors.New("can't extract refresh exp claim")
+	}
+
+	fmt.Println("EHHE", exp)
+
+	rt := time.Unix(int64(exp), 0)
 	now := time.Now()
 
-	err := redis.Set(context.Background(), td.AccessUuid, strconv.Itoa(userid), at.Sub(now)).Err()
-	if err != nil {
-		return err
-	}
-	err = redis.Set(context.Background(), td.RefreshUuid, strconv.Itoa(userid), rt.Sub(now)).Err()
+	err = redis.Set(context.Background(), refreshUuid, strconv.Itoa(int(userId)), rt.Sub(now)).Err()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func SetTokensToCookie(c *gin.Context, tokenDetails *TokenDetails) error {
+func SetAccessTokenCookie(c *gin.Context, token string) error {
 	atExp, err := strconv.Atoi(GetEnv("ACCESS_TOKEN_EXP_MIN"))
 	if err != nil {
 		return err
 	}
 
+	c.SetCookie("access_token", token, int((time.Duration(atExp) * time.Minute).Seconds()), "/", "", false, true)
+
+	return nil
+}
+
+func SetRefreshTokenCookie(c *gin.Context, token string) error {
 	rtExp, err := strconv.Atoi(GetEnv("REFRESH_TOKEN_EXP_HOUR"))
 	if err != nil {
 		return err
 	}
 
-	c.SetCookie("access_token", tokenDetails.AccessToken, int((time.Duration(atExp) * time.Minute).Seconds()), "/", "", false, true)
-	c.SetCookie("refresh_token", tokenDetails.RefreshToken, int((time.Duration(rtExp) * time.Hour).Seconds()), "/", "", false, true)
+	c.SetCookie("refresh_token", token, int((time.Duration(rtExp) * time.Hour).Seconds()), "/", "", false, true)
 
 	return nil
 }

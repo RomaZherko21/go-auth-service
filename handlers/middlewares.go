@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"exampleApi/helpers"
 	"exampleApi/helpers/log"
@@ -43,8 +42,7 @@ func setStartTime(c *gin.Context) {
 }
 
 func authMiddleware(c *gin.Context) {
-	tokens, err := helpers.ExtractTokens(c)
-
+	accessToken, err := c.Cookie("access_token")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
@@ -52,8 +50,7 @@ func authMiddleware(c *gin.Context) {
 		return
 	}
 
-	claims, err := helpers.ParseToken(tokens.AccessToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
-
+	claims, err := helpers.ParseToken(accessToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
 		log.HttpLog(c, log.Warn, http.StatusUnauthorized, err.Error())
@@ -61,32 +58,14 @@ func authMiddleware(c *gin.Context) {
 		return
 	}
 
-	accessUuid, ok := claims["access_uuid"].(string)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
-		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "no access_uuid in token")
-		c.Abort()
-		return
-	}
-
-	redisDb := c.MustGet("redis_db").(*redis.Client)
-
-	val, err := redisDb.Get(context.Background(), accessUuid).Result()
-	if len(val) == 0 || err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
-		log.HttpLog(c, log.Warn, http.StatusUnauthorized, err.Error())
-		c.Abort()
-		return
-	}
-
 	userId, ok := claims["user_id"]
-
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
 		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "no user_id in token")
 		c.Abort()
 		return
 	}
+
 	c.Set("user_id", userId)
 
 	c.Next()
