@@ -6,7 +6,6 @@ import (
 	"exampleApi/helpers/log"
 	"fmt"
 	"net/http"
-	"reflect"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -211,23 +210,17 @@ func SignOutFromAllDevices(c *gin.Context) {
 	for iter.Next(ctx) {
 		currentValue, err := redisDb.Get(ctx, iter.Val()).Result()
 		if err != nil {
-			// log.Fatal(err)
+			log.HttpLog(c, log.Warn, http.StatusBadRequest, fmt.Sprintf("Cant remove refresh token of user: %v. Err: %v", userId, err.Error()))
 		}
 
 		if currentValue == userId {
 			if err := redisDb.Del(context.Background(), iter.Val()).Err(); err != nil {
-				// log.Fatal(err)
+				log.HttpLog(c, log.Warn, http.StatusBadRequest, fmt.Sprintf("Cant remove refresh token: %v, of user: %v. Err: %v", currentValue, userId, err.Error()))
 			}
-			// fmt.Printf("Deleted key: %s\n", key)
 		}
-
-		fmt.Println("keys", iter.Val(), currentValue, userId, currentValue == userId)
-		fmt.Println("Type of variable1:", reflect.TypeOf(userId), reflect.TypeOf(currentValue))
 	}
 	if err := iter.Err(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "er"})
-		log.HttpLog(c, log.Warn, http.StatusBadRequest, "er")
-		return
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, fmt.Sprintf("Cant remove refresh token of user: %v. Err: %v", userId, err.Error()))
 	}
 
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
