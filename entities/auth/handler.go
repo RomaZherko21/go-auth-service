@@ -1,11 +1,12 @@
 package auth
 
 import (
+	"context"
 	"exampleApi/helpers"
 	"exampleApi/helpers/log"
 	"fmt"
 	"net/http"
-	"strconv"
+	"reflect"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -148,8 +149,8 @@ func Refresh(c *gin.Context) {
 		return
 	}
 
-	userId, err := strconv.ParseInt(fmt.Sprintf("%.f", claims["user_id"]), 10, 64)
-	if err != nil {
+	userId, ok := claims["user_id"].(string)
+	if !ok {
 		c.JSON(http.StatusUnprocessableEntity, "Error occurred")
 		return
 	}
@@ -163,14 +164,14 @@ func Refresh(c *gin.Context) {
 		return
 	}
 
-	accessDetails, err := helpers.CreateAccessToken(int(userId))
+	accessDetails, err := helpers.CreateAccessToken(userId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cant create access token"})
 		log.HttpLog(c, log.Warn, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	refreshDetails, err := helpers.CreateRefreshToken(c.Request.Header, int(userId))
+	refreshDetails, err := helpers.CreateRefreshToken(c.Request.Header, userId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cant create refresh token"})
 		log.HttpLog(c, log.Warn, http.StatusInternalServerError, err.Error())
@@ -196,32 +197,42 @@ func Refresh(c *gin.Context) {
 }
 
 func SignOutFromAllDevices(c *gin.Context) {
-	refreshToken, err := c.Cookie("refresh_token")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "can't extract refresh token"})
-		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	// add refresh token to black list
 	redisDb := c.MustGet("redis_db").(*redis.Client)
 
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+	userId, ok := c.Get("user_id")
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "can't extract user id"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, "can't extract user id")
 		return
 	}
 
-	err = helpers.SetRefreshTokenToRedis(redisDb, refreshToken)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Cant set tokens to redis"})
-		log.HttpLog(c, log.Warn, http.StatusInternalServerError, fmt.Sprintf("Cant set tokens to redis: %v", err.Error()))
+	ctx := context.Background()
+	iter := redisDb.Scan(ctx, 0, "*", 0).Iterator()
+	for iter.Next(ctx) {
+		currentValue, err := redisDb.Get(ctx, iter.Val()).Result()
+		if err != nil {
+			// log.Fatal(err)
+		}
+
+		if currentValue == userId {
+			if err := redisDb.Del(context.Background(), iter.Val()).Err(); err != nil {
+				// log.Fatal(err)
+			}
+			// fmt.Printf("Deleted key: %s\n", key)
+		}
+
+		fmt.Println("keys", iter.Val(), currentValue, userId, currentValue == userId)
+		fmt.Println("Type of variable1:", reflect.TypeOf(userId), reflect.TypeOf(currentValue))
+	}
+	if err := iter.Err(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "er"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, "er")
 		return
 	}
 
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
 	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
 
-	c.JSON(http.StatusUnauthorized, gin.H{"message": "User sign out"})
-	log.HttpLog(c, log.Info, http.StatusUnauthorized, "User sign out")
+	c.JSON(http.StatusUnauthorized, gin.H{"message": "User sign out from all devices"})
+	log.HttpLog(c, log.Info, http.StatusUnauthorized, "User sign out from all devices")
 }

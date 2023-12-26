@@ -34,7 +34,7 @@ type AccessTokenDetails struct {
 	AtExpires   int64  `json:"at_expires"`
 }
 
-func CreateAccessToken(userId int) (*AccessTokenDetails, error) {
+func CreateAccessToken(userId string) (*AccessTokenDetails, error) {
 	var err error
 
 	td := &AccessTokenDetails{}
@@ -67,7 +67,7 @@ type RefreshTokenDetails struct {
 	RtExpires    int64  `json:"rt_expires"`
 }
 
-func CreateRefreshToken(headers http.Header, userId int) (*RefreshTokenDetails, error) {
+func CreateRefreshToken(headers http.Header, userId string) (*RefreshTokenDetails, error) {
 	var err error
 
 	td := &RefreshTokenDetails{}
@@ -132,8 +132,8 @@ func SetRefreshTokenToRedis(redis *redis.Client, refreshToken string) error {
 		return errors.New("can't extract refresh_uuid claim")
 	}
 
-	userId, err := strconv.ParseUint(fmt.Sprintf("%.f", claims["user_id"]), 10, 64)
-	if err != nil {
+	userId, ok := claims["user_id"].(string)
+	if !ok {
 		return errors.New("can't extract user_id claim")
 	}
 
@@ -147,7 +147,7 @@ func SetRefreshTokenToRedis(redis *redis.Client, refreshToken string) error {
 	rt := time.Unix(int64(exp), 0)
 	now := time.Now()
 
-	err = redis.Set(context.Background(), refreshUuid, strconv.Itoa(int(userId)), rt.Sub(now)).Err()
+	err = redis.Set(context.Background(), refreshUuid, userId, rt.Sub(now)).Err()
 	if err != nil {
 		return err
 	}

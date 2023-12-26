@@ -58,7 +58,7 @@ func authMiddleware(c *gin.Context) {
 		return
 	}
 
-	userId, ok := claims["user_id"]
+	userId, ok := claims["user_id"].(string)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
 		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "no user_id in token")
