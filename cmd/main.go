@@ -14,6 +14,8 @@ import (
 )
 
 func init() {
+	helpers.CheckRequiredEnvs()
+
 	config.InitLogger()
 }
 
