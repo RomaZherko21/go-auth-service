@@ -1,11 +1,12 @@
 package config
 
 import (
-	"exampleApi/helpers"
 	"os"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
+
+	"exampleApi/helpers"
 )
 
 func InitLogger() {

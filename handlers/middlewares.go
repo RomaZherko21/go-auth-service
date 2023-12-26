@@ -23,15 +23,12 @@ func InitMiddlewares(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
 		c.Next()
 	})
 
+	// set start time on every request to check response time
 	r.Use(func(c *gin.Context) {
-		setStartTime(c)
+		startTime := time.Now()
+		c.Set("startTime", startTime)
+		c.Next()
 	})
-}
-
-func setStartTime(c *gin.Context) {
-	startTime := time.Now()
-	c.Set("startTime", startTime)
-	c.Next()
 }
 
 func authMiddleware(c *gin.Context) {
