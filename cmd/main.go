@@ -13,6 +13,8 @@ import (
 	"exampleApi/helpers"
 )
 
+var SERVER_PORT = helpers.GetEnv("SERVER_PORT")
+
 func init() {
 	helpers.CheckRequiredEnvs()
 
@@ -25,12 +27,11 @@ func main() {
 	dataBase := db.ConnectDb()
 
 	defer dataBase.Close()
+	defer redisDb.Close()
 
 	router := gin.Default()
 
 	handlers.Handlers(router, dataBase, redisDb)
-
-	var SERVER_PORT = helpers.GetEnv("SERVER_PORT")
 
 	err := router.Run(fmt.Sprintf(":%v", SERVER_PORT))
 

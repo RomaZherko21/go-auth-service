@@ -16,6 +16,8 @@ func GetEnv(key string) string {
 		log.Panicf("Error loading .env file: %v", err)
 	}
 
+	fmt.Println("asdasdasd")
+
 	return os.Getenv(key)
 }
 

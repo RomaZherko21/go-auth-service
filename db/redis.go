@@ -10,16 +10,16 @@ import (
 	"exampleApi/helpers"
 )
 
-func ConnectRedis() *redis.Client {
-	host := helpers.GetEnv("REDIS_HOST")
-	port := helpers.GetEnv("REDIS_PORT")
-	password := helpers.GetEnv("REDIS_PASSWORD")
+var REDIS_HOST = helpers.GetEnv("REDIS_HOST")
+var REDIS_PORT = helpers.GetEnv("REDIS_PORT")
+var REDIS_PASSWORD = helpers.GetEnv("REDIS_PASSWORD")
 
-	adress := fmt.Sprintf("%v:%v", host, port)
+func ConnectRedis() *redis.Client {
+	adress := fmt.Sprintf("%v:%v", REDIS_HOST, REDIS_PORT)
 
 	client := redis.NewClient(&redis.Options{
 		Addr:     adress, //redis port
-		Password: password,
+		Password: REDIS_PASSWORD,
 	})
 
 	_, err := client.Ping(context.Background()).Result()
