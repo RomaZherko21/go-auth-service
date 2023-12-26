@@ -36,7 +36,7 @@ func SignIn(c *gin.Context) {
 		return
 	}
 
-	accessDetails, err := helpers.CreateAccessToken(userMeta.ID)
+	accessDetails, err := helpers.CreateAccessToken(c.Request.Header, userMeta.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
 		log.HttpLog(c, log.Warn, http.StatusInternalServerError, fmt.Sprintf("can't create access token: %v", err.Error()))
@@ -116,7 +116,7 @@ func SignOut(c *gin.Context) {
 	err = helpers.SetRefreshTokenToRedis(redisDb, refreshToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
-		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("сan't set tokens to redis: %v", err.Error()))
+		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("сan't set token to redis: %v", err.Error()))
 		return
 	}
 
@@ -154,11 +154,11 @@ func Refresh(c *gin.Context) {
 	err = helpers.SetRefreshTokenToRedis(redisDb, refreshToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
-		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("can't set tokens to redis: %v", err.Error()))
+		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("can't set token to redis: %v", err.Error()))
 		return
 	}
 
-	accessDetails, err := helpers.CreateAccessToken(userId)
+	accessDetails, err := helpers.CreateAccessToken(c.Request.Header, userId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
 		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("can't create access token: %v", err.Error()))

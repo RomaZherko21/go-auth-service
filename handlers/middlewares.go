@@ -5,6 +5,7 @@ import (
 	"exampleApi/consts"
 	"exampleApi/helpers"
 	"exampleApi/helpers/log"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -32,26 +33,59 @@ func InitMiddlewares(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
 }
 
 func authMiddleware(c *gin.Context) {
+	const INVALID_TOKEN_ERROR = "invalid access token"
+	const TOKEN_EXPIRED_ERROR = "token is expired"
+
 	accessToken, err := c.Cookie(consts.ACCESS_TOKEN)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		log.HttpLog(c, log.Warn, http.StatusBadRequest, err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no access token"})
+		log.HttpLog(c, log.Warn, http.StatusBadRequest, fmt.Sprintf("no access token: %v", err.Error()))
 		c.Abort()
 		return
 	}
 
 	claims, err := helpers.ParseToken(accessToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
-		log.HttpLog(c, log.Warn, http.StatusUnauthorized, err.Error())
+		c.JSON(http.StatusUnauthorized, gin.H{"error": TOKEN_EXPIRED_ERROR})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, fmt.Sprintf("can't parse token: %v", err.Error()))
 		c.Abort()
 		return
 	}
 
 	userId, ok := claims["user_id"].(string)
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "token is expired"})
-		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "no user_id in token")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": TOKEN_EXPIRED_ERROR})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "can't extract user_id claim")
+		c.Abort()
+		return
+	}
+
+	tokenUserAgent, ok := claims["user_agent"].(string)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": INVALID_TOKEN_ERROR})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "can't extract user_agent claim")
+		c.Abort()
+		return
+	}
+
+	userAgentHeader := c.Request.Header.Get("User-Agent")
+
+	if userAgentHeader != tokenUserAgent {
+		redisDb := c.MustGet("redis_db").(*redis.Client)
+
+		refreshToken, err := c.Cookie(consts.REFRESH_TOKEN)
+
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": INVALID_TOKEN_ERROR})
+			log.HttpLog(c, log.Warn, http.StatusUnauthorized, fmt.Sprintf("invalid user_agent header: %v", err.Error()))
+			c.Abort()
+			return
+		}
+
+		err = helpers.SetRefreshTokenToRedis(redisDb, refreshToken)
+
+		c.JSON(http.StatusUnauthorized, gin.H{"error": INVALID_TOKEN_ERROR})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, fmt.Sprintf("invalid user_agent header: %v", err.Error()))
 		c.Abort()
 		return
 	}

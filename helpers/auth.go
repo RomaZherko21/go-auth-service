@@ -39,8 +39,10 @@ func CheckPassword(password string, hashedPassword string) bool {
 	return err == nil
 }
 
-func CreateAccessToken(userId string) (*AccessTokenDetails, error) {
+func CreateAccessToken(headers http.Header, userId string) (*AccessTokenDetails, error) {
 	td := &AccessTokenDetails{}
+
+	userAgent := headers.Get("User-Agent")
 
 	atExp, err := strconv.Atoi(GetEnv("ACCESS_TOKEN_EXP_MIN"))
 	if err != nil {
@@ -52,6 +54,7 @@ func CreateAccessToken(userId string) (*AccessTokenDetails, error) {
 	atClaims := jwt.MapClaims{}
 	atClaims["user_id"] = userId
 	atClaims["role"] = "admin"
+	atClaims["user_agent"] = userAgent
 	atClaims["exp"] = td.AtExpires
 
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
