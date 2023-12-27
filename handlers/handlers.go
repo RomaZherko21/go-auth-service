@@ -18,4 +18,6 @@ func Handlers(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
 	r.POST("/auth/refresh", auth.Refresh)
 	r.DELETE("/auth/signOut", authMiddleware, auth.SignOut)
 	r.DELETE("/auth/signOutAll", authMiddleware, auth.SignOutFromAllDevices)
+
+	r.GET("/auth/accessTokenSecret", auth.GetAccessTokenSecret)
 }

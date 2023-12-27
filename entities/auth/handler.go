@@ -158,6 +158,24 @@ func Refresh(c *gin.Context) {
 		return
 	}
 
+	// check refresh token user_agent claim and http header user_agent are equal
+	const INVALID_TOKEN_ERROR = "refresh token is invalid"
+
+	tokenUserAgent, ok := claims["user_agent"].(string)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": INVALID_TOKEN_ERROR})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "can't extract user_agent claim")
+		return
+	}
+
+	userAgentHeader := c.Request.Header.Get("User-Agent")
+
+	if userAgentHeader != tokenUserAgent {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": INVALID_TOKEN_ERROR})
+		log.HttpLog(c, log.Warn, http.StatusUnauthorized, "invalid user_agent header, add refresh token to black list")
+		return
+	}
+
 	accessDetails, err := helpers.CreateAccessToken(c.Request.Header, userId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
@@ -165,6 +183,7 @@ func Refresh(c *gin.Context) {
 		return
 	}
 
+	// create and set new access and refresh tokens
 	refreshDetails, err := helpers.CreateRefreshToken(c.Request.Header, userId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
@@ -196,7 +215,7 @@ func SignOutFromAllDevices(c *gin.Context) {
 	userId, ok := c.Get("user_id")
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
-		log.HttpLog(c, log.Error, http.StatusInternalServerError, "can't extract user_id claim")
+		log.HttpLog(c, log.Error, http.StatusInternalServerError, "can't extract user_id from context")
 		return
 	}
 
@@ -223,4 +242,12 @@ func SignOutFromAllDevices(c *gin.Context) {
 
 	c.JSON(http.StatusUnauthorized, gin.H{"message": "user sign out from all devices"})
 	log.HttpLog(c, log.Info, http.StatusUnauthorized, "user sign out from all devices")
+}
+
+func GetAccessTokenSecret(c *gin.Context) {
+	userAgentHeader := c.Request.Header.Get("User-Agent")
+	publickAccessTokenSecret := helpers.GetEnv("ACCESS_TOKEN_SECRET_PUBLICK")
+
+	c.JSON(http.StatusOK, gin.H{"secret": publickAccessTokenSecret})
+	log.HttpLog(c, log.Info, http.StatusOK, fmt.Sprintf("user agent request access token secret: %v", userAgentHeader))
 }

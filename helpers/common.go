@@ -22,7 +22,7 @@ func GetEnv(key string) string {
 }
 
 func CheckRequiredEnvs() {
-	requiredEnvVars := []string{"SERVER_PORT", "DB_PORT", "DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD", "LOG_LEVEL", "REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD", "ACCESS_TOKEN_SECRET", "ACCESS_TOKEN_EXP_MIN", "REFRESH_TOKEN_SECRET", "REFRESH_TOKEN_EXP_MIN"}
+	requiredEnvVars := []string{"SERVER_PORT", "DB_PORT", "DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD", "LOG_LEVEL", "REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD", "ACCESS_TOKEN_SECRET", "ACCESS_TOKEN_EXP_MIN", "REFRESH_TOKEN_SECRET", "REFRESH_TOKEN_EXP_MIN", "ACCESS_TOKEN_SECRET_PUBLICK", "ACCESS_TOKEN_SECRET_PRIVATE"}
 
 	for _, envVar := range requiredEnvVars {
 		if value, exists := os.LookupEnv(envVar); !exists || value == "" {
