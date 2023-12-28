@@ -7,8 +7,10 @@ import (
 	"exampleApi/helpers/log"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 )
@@ -35,6 +37,22 @@ func InitMiddlewares(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
 func authMiddleware(c *gin.Context) {
 	const TOKEN_EXPIRED_ERROR = "token is expired"
 
+	fileContent, err := os.ReadFile(helpers.GetEnv("ACCESS_TOKEN_PUBLIC_SECRET_PATH"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no access token"})
+		log.HttpLog(c, log.Warn, http.StatusInternalServerError, fmt.Sprintf("Read file error: %v", err.Error()))
+		c.Abort()
+		return
+	}
+
+	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(fileContent)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no access token"})
+		log.HttpLog(c, log.Warn, http.StatusInternalServerError, fmt.Sprintf("Parse token error: %v", err.Error()))
+		c.Abort()
+		return
+	}
+
 	accessToken, err := c.Cookie(consts.ACCESS_TOKEN)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no access token"})
@@ -43,7 +61,7 @@ func authMiddleware(c *gin.Context) {
 		return
 	}
 
-	claims, err := helpers.ParseToken(accessToken, helpers.GetEnv("ACCESS_TOKEN_SECRET"))
+	claims, err := helpers.ParseAccessToken(accessToken, pubKey)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": TOKEN_EXPIRED_ERROR})
 		log.HttpLog(c, log.Warn, http.StatusUnauthorized, fmt.Sprintf("can't parse token: %v", err.Error()))

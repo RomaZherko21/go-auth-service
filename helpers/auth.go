@@ -2,10 +2,12 @@ package helpers
 
 import (
 	"context"
+	"crypto/rsa"
 	"errors"
 	"exampleApi/consts"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -57,8 +59,17 @@ func CreateAccessToken(headers http.Header, userId string) (*AccessTokenDetails,
 	atClaims["user_agent"] = userAgent
 	atClaims["exp"] = td.AtExpires
 
-	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
-	td.AccessToken, err = at.SignedString([]byte(GetEnv("ACCESS_TOKEN_SECRET")))
+	fileContent, err := os.ReadFile(GetEnv("ACCESS_TOKEN_PRIVATE_SECRET_PATH"))
+	if err != nil {
+		return nil, err
+	}
+
+	prvKey, err := jwt.ParseRSAPrivateKeyFromPEM(fileContent)
+	if err != nil {
+		return nil, err
+	}
+
+	td.AccessToken, err = jwt.NewWithClaims(jwt.SigningMethodRS256, atClaims).SignedString(prvKey)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +108,24 @@ func CreateRefreshToken(headers http.Header, userId string) (*RefreshTokenDetail
 func ParseToken(tokenString string, tokenSecret string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(tokenSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+
+	if !ok {
+		return nil, errors.New("can't parse invalid token")
+	}
+
+	return claims, nil
+}
+
+func ParseAccessToken(tokenString string, tokenSecret *rsa.PublicKey) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return tokenSecret, nil
 	})
 
 	if err != nil || !token.Valid {

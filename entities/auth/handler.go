@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 
@@ -246,8 +248,23 @@ func SignOutFromAllDevices(c *gin.Context) {
 
 func GetAccessTokenSecret(c *gin.Context) {
 	userAgentHeader := c.Request.Header.Get("User-Agent")
-	publickAccessTokenSecret := helpers.GetEnv("ACCESS_TOKEN_SECRET_PUBLICK")
 
-	c.JSON(http.StatusOK, gin.H{"secret": publickAccessTokenSecret})
+	fileContent, err := os.ReadFile(helpers.GetEnv("ACCESS_TOKEN_PUBLIC_SECRET_PATH"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no access token"})
+		log.HttpLog(c, log.Warn, http.StatusInternalServerError, fmt.Sprintf("Read file error: %v", err.Error()))
+		c.Abort()
+		return
+	}
+
+	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(fileContent)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no access token"})
+		log.HttpLog(c, log.Warn, http.StatusInternalServerError, fmt.Sprintf("Parse token error: %v", err.Error()))
+		c.Abort()
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"secret": pubKey})
 	log.HttpLog(c, log.Info, http.StatusOK, fmt.Sprintf("user agent request access token secret: %v", userAgentHeader))
 }

@@ -27,6 +27,12 @@ migrateup: ## migrate postgresql up
 migratedown: ## migrate postgresql down
 	migrate -path ./db/migrations -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable" down
 
+.PHONY: cert
+cert:
+	mkdir -p cert
+	openssl genrsa -out cert/access 4096
+	openssl rsa -in cert/access -pubout -out cert/access.pub
+
 .PHONY: goModule
 goModule: ## Remove docker containers
 	go env -w GO111MODULE=on
