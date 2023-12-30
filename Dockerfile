@@ -26,7 +26,7 @@ WORKDIR /app
 COPY --from=builder /app/main .
 COPY --from=builder /app/.env .
 COPY --from=builder /app/builderCert ./cert
-COPY --from=builder /app/db/migrations ./db/migrations
+COPY --from=builder /app/db ./db
 COPY --from=builder /go/bin/migrate /usr/local/bin/migrate
 
 EXPOSE 8000

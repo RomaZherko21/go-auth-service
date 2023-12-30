@@ -9,7 +9,6 @@ import (
 
 	"exampleApi/api"
 	"exampleApi/cmd/config"
-	"exampleApi/db"
 	"exampleApi/shared/helpers"
 )
 
@@ -22,9 +21,9 @@ func init() {
 }
 
 func main() {
-	redisDb := db.ConnectRedis()
+	redisDb := config.ConnectRedis()
 
-	dataBase := db.ConnectDb()
+	dataBase := config.ConnectDb()
 
 	defer dataBase.Close()
 	defer redisDb.Close()
