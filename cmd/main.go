@@ -8,7 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"exampleApi/api"
-	"exampleApi/config"
+	"exampleApi/cmd/config"
 	"exampleApi/db"
 	"exampleApi/shared/helpers"
 )
