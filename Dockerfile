@@ -4,7 +4,7 @@ LABEL stage=gobuilder
 RUN apk update && apk upgrade && \
     apk add --no-cache bash git openssl
 
-RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.17.0
 
 WORKDIR /app
 
@@ -13,14 +13,13 @@ RUN openssl genrsa -out builderCert/access 4096
 RUN openssl rsa -in builderCert/access -pubout -out builderCert/access.pub
 
 COPY go.mod go.sum ./
-
 RUN go mod download
 
 COPY . .
 
 RUN go build -o main ./cmd/main.go
 
-FROM alpine
+FROM alpine:3.19
 
 WORKDIR /app
 

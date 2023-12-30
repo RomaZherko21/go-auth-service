@@ -6,8 +6,8 @@ x-api-variables: &api-variables
   ACCESS_TOKEN_PRIVATE_SECRET_PATH: /app/cert/access
 
 x-db-variables: &db-variables
-  DB_PORT: ${DB_PORT}
   DB_HOST: postgres-db
+  DB_PORT: ${DB_PORT}
   DB_NAME: ${DB_NAME}
   DB_USER: ${DB_USER}
   DB_PASSWORD: ${DB_PASSWORD}
