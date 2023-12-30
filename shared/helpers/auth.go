@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"errors"
-	"exampleApi/consts"
+	"exampleApi/shared/consts"
 	"fmt"
 	"net/http"
 	"os"

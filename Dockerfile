@@ -1,4 +1,5 @@
 FROM golang:1.21.3-alpine AS builder
+LABEL stage=gobuilder
 
 RUN apk update && apk upgrade && \
     apk add --no-cache bash git openssh

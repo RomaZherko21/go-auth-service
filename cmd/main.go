@@ -7,10 +7,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"exampleApi/api"
 	"exampleApi/config"
 	"exampleApi/db"
-	"exampleApi/handlers"
-	"exampleApi/helpers"
+	"exampleApi/shared/helpers"
 )
 
 var SERVER_PORT = helpers.GetEnv("SERVER_PORT")
@@ -31,7 +31,7 @@ func main() {
 
 	router := gin.Default()
 
-	handlers.Handlers(router, dataBase, redisDb)
+	api.Handlers(router, dataBase, redisDb)
 
 	err := router.Run(fmt.Sprintf(":%v", SERVER_PORT))
 

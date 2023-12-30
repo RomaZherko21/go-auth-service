@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"database/sql"
@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 
-	"exampleApi/entities/auth"
+	"exampleApi/api/auth"
 )
 
 func Handlers(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {

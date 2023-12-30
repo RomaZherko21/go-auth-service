@@ -10,9 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 
-	"exampleApi/consts"
-	"exampleApi/helpers"
-	"exampleApi/helpers/log"
+	"exampleApi/shared/consts"
+	"exampleApi/shared/helpers"
+	"exampleApi/shared/helpers/log"
 )
 
 func SignIn(c *gin.Context) {

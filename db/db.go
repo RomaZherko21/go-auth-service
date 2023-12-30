@@ -9,7 +9,7 @@ import (
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 
-	"exampleApi/helpers"
+	"exampleApi/shared/helpers"
 )
 
 var DB_PORT = helpers.GetEnv("DB_PORT")

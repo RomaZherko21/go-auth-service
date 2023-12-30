@@ -7,7 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
 
-	"exampleApi/helpers"
+	"exampleApi/shared/helpers"
 )
 
 var REDIS_HOST = helpers.GetEnv("REDIS_HOST")

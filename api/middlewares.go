@@ -1,10 +1,10 @@
-package handlers
+package api
 
 import (
 	"database/sql"
-	"exampleApi/consts"
-	"exampleApi/helpers"
-	"exampleApi/helpers/log"
+	"exampleApi/shared/consts"
+	"exampleApi/shared/helpers"
+	"exampleApi/shared/helpers/log"
 	"fmt"
 	"net/http"
 	"os"
