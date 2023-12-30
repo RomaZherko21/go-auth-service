@@ -172,6 +172,25 @@ func SetRefreshTokenToRedis(redis *redis.Client, refreshToken string) error {
 	return nil
 }
 
+func DeleteRefreshTokenFromRedis(redis *redis.Client, refreshToken string) error {
+	claims, err := ParseToken(refreshToken, GetEnv("REFRESH_TOKEN_SECRET"))
+	if err != nil {
+		return errors.New("can't parse refresh token")
+	}
+
+	refreshUuid, ok := claims["refresh_uuid"].(string)
+	if !ok {
+		return errors.New("can't extract refresh_uuid claim")
+	}
+
+	err = redis.Del(context.Background(), refreshUuid).Err()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func SetAccessTokenCookie(c *gin.Context, token string) error {
 	atExp, err := strconv.Atoi(GetEnv("ACCESS_TOKEN_EXP_MIN"))
 	if err != nil {

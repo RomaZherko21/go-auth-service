@@ -52,6 +52,15 @@ func SignIn(c *gin.Context) {
 		return
 	}
 
+	redisDb := c.MustGet("redis_db").(*redis.Client)
+
+	err = helpers.SetRefreshTokenToRedis(redisDb, refreshDetails.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
+		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("can't set token to redis: %v", err.Error()))
+		return
+	}
+
 	err = helpers.SetAccessTokenCookie(c, accessDetails.AccessToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
@@ -115,10 +124,10 @@ func SignOut(c *gin.Context) {
 
 	redisDb := c.MustGet("redis_db").(*redis.Client)
 
-	err = helpers.SetRefreshTokenToRedis(redisDb, refreshToken)
+	err = helpers.DeleteRefreshTokenFromRedis(redisDb, refreshToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
-		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("сan't set token to redis: %v", err.Error()))
+		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("can't delete token to redis: %v", err.Error()))
 		return
 	}
 
@@ -153,10 +162,10 @@ func Refresh(c *gin.Context) {
 
 	redisDb := c.MustGet("redis_db").(*redis.Client)
 
-	err = helpers.SetRefreshTokenToRedis(redisDb, refreshToken)
+	err = helpers.DeleteRefreshTokenFromRedis(redisDb, refreshToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
-		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("can't set token to redis: %v", err.Error()))
+		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("can't delete token to redis: %v", err.Error()))
 		return
 	}
 
@@ -190,6 +199,13 @@ func Refresh(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
 		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("can't create refresh token: %v", err.Error()))
+		return
+	}
+
+	err = helpers.SetRefreshTokenToRedis(redisDb, refreshDetails.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": consts.SOMETHING_WENT_WRONG})
+		log.HttpLog(c, log.Error, http.StatusInternalServerError, fmt.Sprintf("can't set token to redis: %v", err.Error()))
 		return
 	}
 
