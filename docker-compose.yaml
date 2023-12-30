@@ -1,55 +1,64 @@
 version: '3.8'
 
+x-api-variables: &api-variables
+  SERVER_PORT: ${SERVER_PORT}
+  ACCESS_TOKEN_PUBLIC_SECRET_PATH: /app/cert/access.pub
+  ACCESS_TOKEN_PRIVATE_SECRET_PATH: /app/cert/access
+
 x-db-variables: &db-variables
   DB_PORT: ${DB_PORT}
-  DB_HOST: ${DB_HOST}
+  DB_HOST: postgres-db
   DB_NAME: ${DB_NAME}
   DB_USER: ${DB_USER}
   DB_PASSWORD: ${DB_PASSWORD}
 
-x-api-variables: &api-variables
-  SERVER_PORT: ${SERVER_PORT}
-
 x-redis-variables: &redis-variables
+  REDIS_HOST: redis-whitelist
   REDIS_PORT: ${REDIS_PORT}
   REDIS_PASSWORD: ${REDIS_PASSWORD}
 
 services:
-  # api:
-  #   image: golang:1.12.7
-  #   container_name: api
-  #   working_dir: /app
-  #   volumes:
-  #     - /Users/romazherko/.gvm/pkgsets/go1.12.7/global/src/exampleApi:/app
-  #   ports:
-  #     - ${SERVER_PORT}:${SERVER_PORT}
-  #   command: go run cmd/main.go
-  #   restart: always
-  #   environment:
-  #     <<: [*db-variables, *api-variables]
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    # restart: unless-stopped
+    depends_on: 
+      - redis-whitelist
+      - postgres-db
+    environment:
+      <<: [*db-variables, *api-variables, *redis-variables]
+    networks:
+      - auth_network
 
-  db:
+  postgres-db:
     image: postgres:16.1
-    container_name: db
+    container_name: postgres-db
     ports:
       - ${DB_PORT}:5432
     volumes:
-      - db_volume:/var/lib/postgresql/data
+      - postgres_db_volume:/var/lib/postgresql/data
       - ./sql-scripts:/docker-entrypoint-initdb.d
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_PORT: ${DB_PORT}
+    networks:
+      - auth_network
 
-  redis:
-    container_name: redis
+  redis-whitelist:
+    container_name: redis-whitelist
     image: redis:7.0.11
     ports:
       - ${REDIS_PORT}:6379
     command: redis-server --loglevel warning --requirepass ${REDIS_PASSWORD}
     volumes: 
-      - redis-volume:/data
+      - redis-whitelist-volume:/data
+    networks:
+      - auth_network
 
   pgadmin:
     image: dpage/pgadmin4
@@ -62,11 +71,17 @@ services:
       PGADMIN_DEFAULT_EMAIL: root@example.com
       PGADMIN_DEFAULT_PASSWORD: 1234
     depends_on:
-      - db
+      - postgres-db
     volumes:
       - pgadmin_volume:/var/lib/pgadmin
+    networks:
+      - auth_network
 
 volumes:
-  db_volume:
+  postgres_db_volume:
   pgadmin_volume:
-  redis-volume:
+  redis-whitelist-volume:
+
+networks:
+  auth_network:   
+    driver: bridge 

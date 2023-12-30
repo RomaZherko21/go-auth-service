@@ -1,31 +1,27 @@
-FROM golang:alpine AS builder
-LABEL stage=gobuilder
+FROM golang:1.21.3-alpine AS builder
 
-ENV CGO_ENABLED 0
-ENV GOOS linux
+RUN apk update && apk upgrade && \
+    apk add --no-cache bash git openssh
 
-# RUN apk update --no-cache && apk add --no-cache tzdata
+RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+RUN ln -s /go/bin/linux_amd64/migrate /usr/local/bin/migrate
 
-WORKDIR /build
+WORKDIR /app
 
-ADD go.mod .
-ADD go.sum .
+COPY go.mod go.sum ./
+
 RUN go mod download
 
 COPY . .
 
+# need to make cert after COPY . . but it will make a new cert after every changes 
+RUN apk add openssl
+RUN mkdir -p cert
+RUN openssl genrsa -out cert/access 4096
+RUN openssl rsa -in cert/access -pubout -out cert/access.pub
+
 RUN go build -o main ./cmd/main.go
 
-FROM alpine
+EXPOSE 8000
 
-# RUN apk update --no-cache && apk add --no-cache ca-certificates
-
-# COPY --from=builder /usr/share/zoneinfo/America/New_York /usr/share/zoneinfo/America/New_York
-
-# ENV TZ GMT+0
-
-WORKDIR /build
-
-COPY --from=builder /build/main /build/main
-
-CMD [". /main"]
+CMD ["./main"]
