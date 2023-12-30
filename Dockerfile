@@ -2,12 +2,15 @@ FROM golang:1.21.3-alpine AS builder
 LABEL stage=gobuilder
 
 RUN apk update && apk upgrade && \
-    apk add --no-cache bash git openssh
+    apk add --no-cache bash git openssl
 
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-RUN ln -s /go/bin/linux_amd64/migrate /usr/local/bin/migrate
 
 WORKDIR /app
+
+RUN mkdir -p builderCert
+RUN openssl genrsa -out builderCert/access 4096
+RUN openssl rsa -in builderCert/access -pubout -out builderCert/access.pub
 
 COPY go.mod go.sum ./
 
@@ -15,13 +18,17 @@ RUN go mod download
 
 COPY . .
 
-# need to make cert after COPY . . but it will make a new cert after every changes 
-RUN apk add openssl
-RUN mkdir -p cert
-RUN openssl genrsa -out cert/access 4096
-RUN openssl rsa -in cert/access -pubout -out cert/access.pub
-
 RUN go build -o main ./cmd/main.go
+
+FROM alpine
+
+WORKDIR /app
+
+COPY --from=builder /app/main .
+COPY --from=builder /app/.env .
+COPY --from=builder /app/builderCert ./cert
+COPY --from=builder /app/db/migrations ./db/migrations
+COPY --from=builder /go/bin/migrate /usr/local/bin/migrate
 
 EXPOSE 8000
 
