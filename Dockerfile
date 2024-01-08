@@ -29,6 +29,6 @@ COPY --from=builder /app/builderCert ./cert
 COPY --from=builder /app/db ./db
 COPY --from=builder /go/bin/migrate /usr/local/bin/migrate
 
-EXPOSE 8000
+EXPOSE 5001
 
 CMD ["./main"]

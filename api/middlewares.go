@@ -11,11 +11,14 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 )
 
 func InitMiddlewares(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
+	r.Use(InitCors())
+
 	r.Use(func(c *gin.Context) {
 		c.Set("db", db)
 		c.Next()
@@ -32,6 +35,14 @@ func InitMiddlewares(r *gin.Engine, db *sql.DB, redisDb *redis.Client) {
 		c.Set("startTime", startTime)
 		c.Next()
 	})
+}
+
+func InitCors() gin.HandlerFunc {
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"http://localhost:3000"}
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+
+	return cors.New(config)
 }
 
 func authMiddleware(c *gin.Context) {
